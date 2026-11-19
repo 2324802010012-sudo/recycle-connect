@@ -1,8 +1,10 @@
 ﻿
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, LockKeyhole, UserRound, Recycle } from 'lucide-react'
-import { login } from '../services/authService'
+import { login, rolePaths } from '../services/authService'
+
+const protectedPaths = new Set([...Object.values(rolePaths), '/dan/tao-yeu-cau'])
 
 function Login() {
   const navigate = useNavigate()
@@ -13,9 +15,11 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const submitting = useRef(false)
 
   async function handleSubmit(e) {
     e.preventDefault()
+    if (submitting.current) return
     setError('')
 
     if (!username.trim() || !password) {
@@ -23,6 +27,7 @@ function Login() {
       return
     }
 
+    submitting.current = true
     setLoading(true)
 
     try {
@@ -32,34 +37,33 @@ function Login() {
       }
 
       const user = data.user
+      setPassword('')
 
-      if (user.role === 'DAN') {
-        navigate(state?.from === '/dan/tao-yeu-cau' ? state.from : '/dan', { replace: true })
-      } else if (user.role === 'THUGOM') {
-        navigate('/thugom', { replace: true })
-      } else if (user.role === 'ADMIN') {
-        navigate('/admin', { replace: true })
-      } else {
+      const home = rolePaths[user.role]
+      if (!home) {
         setError('Vai trò tài khoản không hợp lệ.')
+        return
       }
+      navigate(protectedPaths.has(state?.from) ? state.from : home, { replace: true })
     } catch (err) {
       setError(err.message || 'Không thể kết nối máy chủ.')
     } finally {
+      submitting.current = false
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAF9] flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#e5f2e9] via-[#f5f8f6] to-white p-4">
+      <div className="w-full max-w-md rounded-[2rem] border bg-white p-6 shadow-xl shadow-emerald-950/5 sm:p-8">
 
         <div className="flex flex-col items-center mb-8">
-          <div className="bg-green-50 p-4 rounded-full mb-4">
+          <div className="mb-4 rounded-2xl bg-[#e7f3ec] p-4">
             <Recycle size={42} className="text-[#167D61]" />
           </div>
 
-          <h1 className="text-3xl font-bold text-[#167D61]">
-            RECYCLE CONNECT
+          <h1 className="text-center text-3xl font-bold tracking-tight text-[#153e31]">
+            Recycle Connect
           </h1>
 
           <p className="text-gray-500 mt-2 text-center">
@@ -133,6 +137,7 @@ function Login() {
           <button
             type="submit"
             disabled={loading}
+            aria-busy={loading}
             className="w-full bg-[#167D61] hover:bg-[#11634D] text-white font-semibold py-3 rounded-xl disabled:opacity-60"
           >
             {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}

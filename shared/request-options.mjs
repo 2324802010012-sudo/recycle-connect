@@ -1,6 +1,6 @@
 ﻿export const AREA_OPTIONS = [
-  { value: 'KHU_VUC_1', label: 'Khu vực 1' },
-  { value: 'KHU_VUC_2', label: 'Khu vực 2' },
+  { value: 'KHU_VUC_1', label: 'Thuận An' },
+  { value: 'KHU_VUC_2', label: 'Thủ Dầu Một' },
 ]
 
 export const WASTE_TYPES = ['GIAY', 'NHUA', 'KIM_LOAI', 'THUY_TINH', 'KHAC']

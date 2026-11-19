@@ -1,11 +1,10 @@
-﻿
-import { useCallback, useState } from 'react'
+﻿import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Recycle, LogOut, LayoutDashboard,
+  Recycle, LogOut,
   Clock3, Truck, CircleCheck,
   ClipboardList, Filter, Eye,
-  AlertCircle, BarChart3,
+  AlertCircle,
 } from 'lucide-react'
 
 import { logout } from '../services/authService'
@@ -18,6 +17,7 @@ import RequestCard from '../components/RequestCard'
 import { useRequestData } from '../services/useRequestData'
 import RequestFeedback from '../components/RequestFeedback'
 import RequestPagination from '../components/RequestPagination'
+import AdminCharts from '../components/AdminCharts'
 
 const wasteLabels = {
   GIAY: 'Giấy',
@@ -26,24 +26,6 @@ const wasteLabels = {
   THUY_TINH: 'Thủy tinh',
   KHAC: 'Khác',
 }
-
-const chartItems = [
-  {
-    key: 'CHO_NHAN',
-    label: 'Chờ nhận',
-    color: 'bg-amber-500',
-  },
-  {
-    key: 'DA_NHAN',
-    label: 'Đã nhận',
-    color: 'bg-blue-500',
-  },
-  {
-    key: 'HOAN_THANH',
-    label: 'Hoàn thành',
-    color: 'bg-[#167D61]',
-  },
-]
 
 function formatDate(value) {
   if (!value) return '—'
@@ -75,10 +57,9 @@ function Admin({ user }) {
   const loadRequests = useCallback(signal => getRequestPage('admin/requests', {
     status: statusFilter, wasteType: wasteFilter, from: fromDate, to: toDate, page, limit: 20,
   }, signal), [statusFilter, wasteFilter, fromDate, toDate, page])
-  const list = useRequestData(loadRequests)
-  const statistics = useRequestData(getAdminStats)
+  const list = useRequestData(loadRequests, { poll: true })
+  const statistics = useRequestData(getAdminStats, { poll: true })
   const stats = statistics.data?.byStatus ?? {}
-  const total = statistics.data?.total ?? 0
   const filteredRequests = list.data?.items ?? []
 
   function resetFilters() {
@@ -99,18 +80,17 @@ function Admin({ user }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAF9] text-[#253B35]">
+    <div className="min-h-screen bg-[#f5f8f6] text-[#253B35]">
       {/* HEADER */}
-      <header className="border-b bg-white">
+      <header className="border-b bg-white/95">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-5">
           <div className="flex items-center gap-3">
-            <Recycle
-              size={36}
-              className="text-[#167D61]"
-            />
+            <span className="grid size-11 place-items-center rounded-2xl bg-[#e7f3ec] text-[#167d61]">
+              <Recycle size={23} aria-hidden="true" />
+            </span>
 
             <div>
-              <h1 className="text-xl font-bold text-[#167D61]">
+              <h1 className="text-sm font-bold tracking-wide text-[#153e31] sm:text-base">
                 RECYCLE CONNECT
               </h1>
               <p className="text-sm text-gray-500">
@@ -121,7 +101,8 @@ function Admin({ user }) {
 
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 rounded-xl border px-4 py-2 hover:bg-gray-50"
+            type="button"
+            className="flex items-center gap-2 rounded-xl border bg-white px-3 py-2 text-sm font-medium text-[#163c30] transition hover:bg-[#eef6f1] sm:px-4"
           >
             <LogOut size={18} />
             Đăng xuất
@@ -130,23 +111,17 @@ function Admin({ user }) {
       </header>
 
       <main className="mx-auto max-w-7xl space-y-7 px-4 py-8">
-        {/* THÔNG TIN ADMIN */}
-        <section className="rounded-2xl bg-[#EAF5EF] p-6">
-          <div className="flex items-center gap-3">
-            <LayoutDashboard
-              size={30}
-              className="text-[#167D61]"
-            />
-
+        <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-[#123e32] via-[#175641] to-[#1c7556] px-6 py-7 text-white shadow-sm sm:px-8 sm:py-9">
+          <div className="flex flex-wrap items-end justify-between gap-5">
             <div>
-              <h2 className="text-2xl font-bold">
-                Dashboard quản trị
-              </h2>
-
-              <p className="mt-1 text-gray-600">
-                Xin chào, {user.fullName}
-              </p>
+              <h2 className="text-2xl font-bold tracking-tight sm:text-4xl">Tổng quan thu gom</h2>
+              <p className="mt-2 text-sm text-emerald-100">{user.fullName}</p>
             </div>
+            {statistics.updatedAt && !statistics.error && (
+              <p className="text-xs text-emerald-100">
+                Cập nhật lúc {statistics.updatedAt.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+              </p>
+            )}
           </div>
         </section>
 
@@ -161,118 +136,51 @@ function Admin({ user }) {
           </p>
         )}
 
-        {/* KPI */}
-        <section className="grid gap-4 sm:grid-cols-3">
+        <section aria-label="Số yêu cầu theo trạng thái" className="grid gap-3 sm:grid-cols-3 sm:gap-4">
           {[
             {
               label: 'Chờ nhận',
               value: stats.CHO_NHAN,
               Icon: Clock3,
-              color: 'text-amber-600',
+              color: 'bg-warning/20 text-amber-900',
             },
             {
               label: 'Đã nhận',
               value: stats.DA_NHAN,
               Icon: Truck,
-              color: 'text-blue-600',
+              color: 'bg-[#ebf2fd] text-[#315b9b]',
             },
             {
               label: 'Hoàn thành',
               value: stats.HOAN_THANH,
               Icon: CircleCheck,
-              color: 'text-[#167D61]',
+              color: 'bg-[#e7f3ec] text-[#167d61]',
             },
           ].map(item => (
             <div
               key={item.label}
-              className="rounded-2xl border bg-white p-5 shadow-sm"
+              className="rounded-3xl border bg-white p-5 shadow-sm"
             >
               <div className="flex items-center justify-between">
                 <p className="text-gray-500">
                   {item.label}
                 </p>
-                <item.Icon
-                  size={26}
-                  className={item.color}
-                />
+                <span className={`grid size-10 place-items-center rounded-xl ${item.color}`}>
+                  <item.Icon size={21} aria-hidden="true" />
+                </span>
               </div>
 
-              <p className="mt-4 text-4xl font-bold">
+              <p className="mt-2 text-3xl font-semibold tabular-nums tracking-tight text-[#163c30]">
                 {item.value ?? '—'}
               </p>
             </div>
           ))}
         </section>
 
-        {/* BIỂU ĐỒ */}
-        {statistics.data && <section className="rounded-2xl border bg-white p-6 shadow-sm">
-          <div className="mb-6 flex items-center gap-3">
-            <BarChart3
-              size={24}
-              className="text-[#167D61]"
-            />
-            <h3 className="text-xl font-bold">
-              Biểu đồ phân bố trạng thái
-            </h3>
-          </div>
-
-          <p className="mb-5 text-gray-500">
-            Tổng số yêu cầu: {total}
-          </p>
-
-          <div className="space-y-6">
-            {chartItems.map(item => {
-              const count = stats[item.key]
-              const percent = total > 0
-                ? (count / total) * 100
-                : 0
-
-              return (
-                <div key={item.key}>
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="font-medium">
-                      {item.label}
-                    </span>
-
-                    <span className="text-sm text-gray-500">
-                      {count} yêu cầu ({percent.toFixed(1)}%)
-                    </span>
-                  </div>
-
-                  <div className="h-4 overflow-hidden rounded-full bg-gray-100">
-                    <div
-                      className={`h-full rounded-full transition-all ${item.color}`}
-                      style={{ width: `${percent}%` }}
-                    />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </section>}
-
-        {statistics.data?.byWasteType?.length > 0 && (
-          <section className="rounded-2xl border bg-white p-6 shadow-sm">
-            <h3 className="mb-5 text-xl font-bold">Yêu cầu theo loại rác</h3>
-            <div className="space-y-4">
-              {statistics.data.byWasteType.map(({ wasteType, count }) => (
-                <div key={wasteType}>
-                  <div className="mb-1 flex justify-between gap-3 text-sm">
-                    <span>{wasteLabels[wasteType] ?? wasteType}</span>
-                    <span>{count} yêu cầu</span>
-                  </div>
-                  <div aria-hidden="true" className="h-3 overflow-hidden rounded-full bg-gray-100">
-                    <div className="h-full rounded-full bg-[#167D61]"
-                      style={{ width: `${total ? (count / total) * 100 : 0}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+        {statistics.data && <AdminCharts stats={statistics.data} wasteLabels={wasteLabels} />}
 
         {/* BỘ LỌC */}
-        <section className="rounded-2xl border bg-white p-6 shadow-sm">
+        <section className="rounded-3xl border bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-5 flex items-center gap-3">
             <Filter
               size={22}
@@ -296,7 +204,7 @@ function Admin({ user }) {
                 id="admin-status"
                 value={statusFilter}
                 onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
-                className="w-full rounded-xl border p-3"
+                className="w-full rounded-xl border bg-[#f8faf9] p-3 text-sm"
               >
                 <option value="">Tất cả trạng thái</option>
                 <option value="CHO_NHAN">Chờ nhận</option>
@@ -317,7 +225,7 @@ function Admin({ user }) {
                 id="admin-waste"
                 value={wasteFilter}
                 onChange={e => { setWasteFilter(e.target.value); setPage(1) }}
-                className="w-full rounded-xl border p-3"
+                className="w-full rounded-xl border bg-[#f8faf9] p-3 text-sm"
               >
                 <option value="">Tất cả loại rác</option>
                 {Object.entries(wasteLabels).map(
@@ -344,7 +252,7 @@ function Admin({ user }) {
                 value={fromDate}
                 max={toDate || undefined}
                 onChange={e => { setFromDate(e.target.value); setPage(1) }}
-                className="w-full rounded-xl border p-3"
+                className="w-full rounded-xl border bg-[#f8faf9] p-3 text-sm"
               />
             </div>
 
@@ -362,7 +270,7 @@ function Admin({ user }) {
                 value={toDate}
                 min={fromDate || undefined}
                 onChange={e => { setToDate(e.target.value); setPage(1) }}
-                className="w-full rounded-xl border p-3"
+                className="w-full rounded-xl border bg-[#f8faf9] p-3 text-sm"
               />
             </div>
           </div>
@@ -378,7 +286,7 @@ function Admin({ user }) {
         </section>
 
         {/* DANH SÁCH */}
-        <section className="overflow-hidden rounded-2xl border bg-white shadow-sm">
+        <section className="overflow-hidden rounded-3xl border bg-white shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b p-5">
             <div className="flex items-center gap-3">
               <ClipboardList

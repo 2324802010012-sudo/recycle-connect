@@ -24,7 +24,7 @@ function RequestCard({
   if (!request) return null
 
   return (
-    <article className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+    <article className="rounded-3xl border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-lg font-bold text-[#253B35]">
           Yêu cầu #{request.RequestId}
@@ -57,7 +57,7 @@ function RequestCard({
           type="button"
           onClick={() => onView?.(request)}
           disabled={!onView}
-          className="inline-flex items-center gap-2 rounded-xl border border-[#167D61] px-4 py-2 font-medium text-[#167D61] hover:bg-[#EAF5EF] disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-xl border border-[#daebe1] bg-[#f4f9f6] px-4 py-2 font-medium text-[#12644e] transition hover:bg-[#e7f3ec] disabled:opacity-50"
         >
           <Eye size={18} />
           Xem chi tiết

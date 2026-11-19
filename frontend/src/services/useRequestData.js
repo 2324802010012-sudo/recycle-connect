@@ -16,6 +16,7 @@ export function useRequestData(load, { enabled = true, poll = false, clearOnErro
     let active = true
     let timer
     let controller
+    let sessionExpired = false
 
     function stop() {
       clearTimeout(timer)
@@ -35,6 +36,7 @@ export function useRequestData(load, { enabled = true, poll = false, clearOnErro
       } catch (error) {
         if (!active || (request.signal.aborted && request.signal.reason !== 'timeout')) return
         if (error.status === 401) {
+          sessionExpired = true
           navigate('/login', { replace: true })
           return
         }
@@ -49,7 +51,7 @@ export function useRequestData(load, { enabled = true, poll = false, clearOnErro
         }))
       } finally {
         clearTimeout(timeout)
-        if (active && poll && controller === request && !document.hidden) {
+        if (active && poll && !sessionExpired && controller === request && !document.hidden) {
           timer = setTimeout(fetchData, POLL_INTERVAL)
         }
       }
@@ -57,7 +59,7 @@ export function useRequestData(load, { enabled = true, poll = false, clearOnErro
 
     function onVisibilityChange() {
       if (document.hidden) stop()
-      else fetchData()
+      else if (!sessionExpired) fetchData()
     }
 
     if (!poll || !document.hidden) fetchData()
@@ -70,6 +72,6 @@ export function useRequestData(load, { enabled = true, poll = false, clearOnErro
   }, [load, enabled, poll, clearOnError, revision, navigate])
 
   const current = enabled && snapshot?.load === load ? snapshot : empty
-  return { ...current, loading: enabled && current === empty, refresh }
+  return { ...current, lastData: enabled ? snapshot?.data : null, loading: enabled && current === empty, refresh }
 }
 

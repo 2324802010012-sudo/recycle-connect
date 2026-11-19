@@ -1,4 +1,10 @@
 ﻿
+export const rolePaths = {
+  DAN: '/dan',
+  THUGOM: '/thugom',
+  ADMIN: '/admin',
+}
+
 async function parseResponse(response) {
   const data = await response.json().catch(() => null)
 
@@ -37,7 +43,11 @@ export async function getCurrentUser() {
 
   if (response.status === 401) return null
 
-  return parseResponse(response)
+  const data = await parseResponse(response)
+  if (!data?.success || !data?.user) {
+    throw new Error('Phản hồi phiên đăng nhập không hợp lệ.')
+  }
+  return data
 }
 
 export async function logout() {

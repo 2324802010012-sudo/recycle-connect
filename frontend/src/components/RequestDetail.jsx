@@ -1,13 +1,9 @@
-﻿
-import { useCallback, useEffect, useRef } from 'react'
+﻿import { useCallback, useEffect, useRef } from 'react'
 import {
-  X,
-  UserRound,
-  Clock3,
-  CheckCircle2,
+  CalendarDays, Check, CircleCheck, Clock3, MapPin, MapPinned,
+  PackageOpen, Scale, StickyNote, Truck, UserRound, X,
 } from 'lucide-react'
 import StatusBadge from './StatusBadge'
-
 import { getRequestDetail } from '../services/requestService'
 import { areaLabel } from '../services/requestOptions'
 import { useRequestData } from '../services/useRequestData'
@@ -22,35 +18,86 @@ const wasteLabels = {
 }
 
 const steps = [
-  { status: 'CHO_NHAN', label: 'Chờ nhận' },
-  { status: 'DA_NHAN', label: 'Đã nhận' },
-  { status: 'HOAN_THANH', label: 'Hoàn thành' },
+  { status: 'CHO_NHAN', label: 'Chờ nhận', dateField: 'CreatedAt', Icon: Clock3 },
+  { status: 'DA_NHAN', label: 'Đã nhận', dateField: 'AcceptedAt', Icon: Truck },
+  { status: 'HOAN_THANH', label: 'Hoàn thành', dateField: 'CompletedAt', Icon: CircleCheck },
 ]
 
-function formatDate(value) {
-  if (!value) return null
+const dateTime = new Intl.DateTimeFormat('vi-VN', {
+  timeZone: 'Asia/Ho_Chi_Minh',
+  dateStyle: 'short',
+  timeStyle: 'short',
+})
 
+function formatTimestamp(value) {
   const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-
-  return date.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
+  return Number.isNaN(date.getTime()) ? value : dateTime.format(date)
 }
 
-function DetailRow({ label, value }) {
-  if (value === null || value === undefined || value === '') {
-    return null
-  }
+function formatPreferredDate(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value.split('-').reverse().join('/') : value
+}
+
+function DetailField({ icon: Icon, label, value, wide = false }) {
+  if (value == null || value === '') return null
 
   return (
-    <div className="border-b border-gray-100 py-3">
-      <p className="mb-1 text-sm text-gray-500">{label}</p>
-      <p className="break-words font-medium text-[#253B35]">
-        {value}
-      </p>
+    <div className={`flex min-w-0 items-start gap-3 rounded-2xl bg-[#f4f8f5] p-3 ${wide ? 'col-span-full' : ''}`}>
+      <Icon size={17} className="mt-0.5 shrink-0 text-[#167d61]" aria-hidden="true" />
+      <div className="min-w-0">
+        <dt className="text-xs font-medium text-slate-600">{label}</dt>
+        <dd className="mt-1 whitespace-pre-wrap break-words text-sm font-semibold text-[#153e31]">{value}</dd>
+      </div>
     </div>
+  )
+}
+
+function RequestTimeline({ request }) {
+  const currentIndex = steps.findIndex(step => step.status === request.Status)
+
+  return (
+    <section aria-labelledby="request-timeline-title" className="rounded-3xl border bg-white p-4 shadow-sm sm:p-5">
+      <h3 id="request-timeline-title" className="text-base font-bold text-[#153e31]">Tiến độ thu gom</h3>
+      <ol className="mt-4">
+        {steps.map(({ status, label, dateField, Icon }, index) => {
+          const current = index === currentIndex
+          const passed = index < currentIndex
+          const timestamp = current || passed ? request[dateField] : null
+          const Marker = passed ? Check : Icon
+          const markerStyle = current
+            ? 'bg-[#167d61] text-white ring-4 ring-[#dcefe4]'
+            : passed ? 'bg-[#e7f3ec] text-[#167d61]' : 'bg-[#f0f4f2] text-slate-500'
+
+          return (
+            <li key={status} aria-current={current ? 'step' : undefined} className="relative flex gap-3 pb-3 last:pb-0 sm:gap-4">
+              {index < steps.length - 1 && (
+                <span aria-hidden="true" className={`absolute bottom-[-10px] left-[19px] top-8 w-0.5 ${passed ? 'bg-[#92c7ad]' : 'bg-[#e2ebe6]'}`} />
+              )}
+              <span className={`relative mt-2 grid size-10 shrink-0 place-items-center rounded-full ${markerStyle}`}>
+                <Marker size={19} aria-hidden="true" />
+              </span>
+              <div className={`min-w-0 flex-1 rounded-2xl border px-3 py-2.5 sm:px-4 ${current ? 'border-[#cce5d7] bg-[#eef8f1]' : 'border-transparent'}`}>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <p className={`text-sm font-semibold ${current || passed ? 'text-[#153e31]' : 'text-slate-600'}`}>{label}</p>
+                  {current && (
+                    <span className="rounded-full bg-[#dcefe4] px-2 py-0.5 text-[11px] font-semibold text-[#12644e]">Hiện tại</span>
+                  )}
+                </div>
+                {timestamp ? (
+                  <time dateTime={timestamp} className="mt-1 block text-xs tabular-nums text-slate-600">
+                    {formatTimestamp(timestamp)}
+                  </time>
+                ) : (
+                  <p className="mt-1 text-xs text-slate-600">
+                    {current || passed ? 'Chưa có thời gian ghi nhận' : 'Chưa đến giai đoạn này'}
+                  </p>
+                )}
+              </div>
+            </li>
+          )
+        })}
+      </ol>
+    </section>
   )
 }
 
@@ -58,32 +105,22 @@ function RequestDetail({ id, onClose }) {
   const dialog = useRef(null)
   const load = useCallback(signal => getRequestDetail(id, signal), [id])
   const state = useRequestData(load, { enabled: id != null, poll: true })
-  const request = state.data
+  const request = state.data?.RequestId != null && String(state.data.RequestId) === String(id)
+    ? state.data
+    : null
 
   useEffect(() => {
     const element = dialog.current
     if (id == null || !element) return
     const trigger = document.activeElement
-    element.showModal()
+    if (!element.open) element.showModal()
     return () => {
-      element.close()
-      trigger?.focus()
+      if (element.open) element.close()
+      if (trigger?.isConnected) trigger.focus()
     }
   }, [id])
 
   if (id == null) return null
-
-  const currentIndex = steps.findIndex(
-    step => step.status === request?.Status
-  )
-
-  const timestamps = {
-    CHO_NHAN: request?.CreatedAt,
-    DA_NHAN: request?.AcceptedAt,
-    HOAN_THANH: request?.CompletedAt,
-  }
-
-  const showCollector = Boolean(request?.CollectorId)
 
   return (
     <dialog
@@ -97,152 +134,75 @@ function RequestDetail({ id, onClose }) {
               event.clientY < bounds.top || event.clientY > bounds.bottom) onClose()
         }
       }}
-      className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none overflow-y-auto bg-white shadow-2xl backdrop:bg-black/40 md:left-auto md:w-full md:max-w-xl"
+      className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none overflow-y-auto overscroll-contain bg-[#f5f8f6] shadow-2xl backdrop:bg-[#0c2a21]/50 md:bottom-3 md:left-auto md:right-3 md:top-3 md:h-auto md:max-w-xl md:rounded-3xl"
     >
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-5 py-4">
-          <h2
-            id="request-detail-title"
-            className="text-xl font-bold text-[#167D61]"
-          >
-            Chi tiết yêu cầu #{id}
-          </h2>
+      <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b bg-white px-4 py-3 sm:px-6">
+        <h2 id="request-detail-title" className="min-w-0 break-words text-lg font-bold tracking-tight text-[#153e31] sm:text-xl">
+          Chi tiết yêu cầu #{id}
+        </h2>
+        <button type="button" onClick={onClose} aria-label="Đóng chi tiết"
+          className="grid size-11 shrink-0 place-items-center rounded-xl bg-[#eef4f1] text-[#153e31] transition hover:bg-[#deebe3]">
+          <X size={21} aria-hidden="true" />
+        </button>
+      </header>
 
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Đóng chi tiết"
-            className="rounded-lg p-2 hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-[#167D61]"
-          >
-            <X size={24} />
-          </button>
-        </div>
-
-        <div className="space-y-7 p-5 md:p-7">
-          <RequestFeedback state={state} />
-          {request && <>
-          <section>
-            <h3 className="mb-4 text-lg font-bold">
-              Thông tin yêu cầu
-            </h3>
-
-            <StatusBadge status={request.Status} />
-
-            <div className="mt-4">
-              <DetailRow
-                label="Loại rác"
-                value={wasteLabels[request.WasteType] || request.WasteType}
-              />
-              <DetailRow
-                label="Khối lượng"
-                value={`${request.QuantityKg} kg`}
-              />
-              <DetailRow
-                label="Khu vực"
-                value={areaLabel(request.Area)}
-              />
-              <DetailRow
-                label="Địa chỉ thu gom"
-                value={request.Address}
-              />
-              <DetailRow
-                label="Ngày mong muốn"
-                value={request.PreferredDate}
-              />
-              <DetailRow
-                label="Ghi chú"
-                value={request.Note}
-              />
-              <DetailRow
-                label="Ngày tạo"
-                value={formatDate(request?.CreatedAt)}
-              />
-            </div>
-          </section>
-
-          {showCollector && (
-            <section className="rounded-xl bg-[#EAF5EF] p-4">
-              <div className="flex items-center gap-2 font-semibold">
-                <UserRound size={20} />
-                Thông tin người thu gom
+      <div className="space-y-4 p-4 sm:space-y-5 sm:p-6">
+        <RequestFeedback state={state} />
+        {request && (
+          <>
+            <section aria-label="Tóm tắt yêu cầu" className="rounded-3xl bg-gradient-to-br from-[#143e32] to-[#1c7056] p-4 text-white sm:p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white/15">
+                    <PackageOpen size={22} aria-hidden="true" />
+                  </span>
+                  <h3 className="min-w-0 break-words text-lg font-semibold tracking-tight">
+                    {wasteLabels[request.WasteType] ?? request.WasteType}
+                  </h3>
+                </div>
+                <div className="rounded-full bg-white">
+                  <StatusBadge status={request.Status} />
+                </div>
               </div>
-
-              <p className="mt-2 text-sm">
-                Mã nhân viên: {request.CollectorId}
-              </p>
-
-              {request.CollectorName && (
-                <p className="mt-1 text-sm">
-                  Họ tên: {request.CollectorName}
-                </p>
-              )}
+              <dl className="mt-4 grid grid-cols-2 gap-2 border-t border-white/20 pt-3 text-sm">
+                <div className="min-w-0">
+                  <dt className="flex items-center gap-1.5 text-xs text-emerald-100"><Scale size={15} aria-hidden="true" />Khối lượng</dt>
+                  <dd className="mt-1 break-words font-semibold tabular-nums">{request.QuantityKg} kg</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="flex items-center gap-1.5 text-xs text-emerald-100"><MapPinned size={15} aria-hidden="true" />Khu vực</dt>
+                  <dd className="mt-1 break-words font-semibold">{areaLabel(request.Area)}</dd>
+                </div>
+              </dl>
             </section>
-          )}
 
-          <section>
-            <h3 className="mb-5 text-lg font-bold">
-              Tiến độ thu gom
-            </h3>
+            <RequestTimeline request={request} />
 
-            <div className="space-y-0">
-              {steps.map((step, index) => {
-                const active = index <= currentIndex
-                const timestamp = timestamps[step.status]
+            <section aria-labelledby="request-info-title" className="rounded-3xl border bg-white p-4 shadow-sm sm:p-5">
+              <h3 id="request-info-title" className="text-base font-bold text-[#153e31]">Thông tin thu gom</h3>
+              <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+                <DetailField icon={CalendarDays} label="Ngày mong muốn" value={formatPreferredDate(request.PreferredDate)} />
+                <DetailField icon={Clock3} label="Ngày tạo" value={request.CreatedAt && formatTimestamp(request.CreatedAt)} />
+                <DetailField icon={MapPin} label="Địa chỉ thu gom" value={request.Address} wide />
+                <DetailField icon={StickyNote} label="Ghi chú" value={request.Note} wide />
+              </dl>
+            </section>
 
-                return (
-                  <div key={step.status} className="flex gap-4">
-                    <div className="flex flex-col items-center">
-                      <div
-                        className={`flex h-9 w-9 items-center justify-center rounded-full ${
-                          active
-                            ? 'bg-[#167D61] text-white'
-                            : 'bg-gray-100 text-gray-400'
-                        }`}
-                      >
-                        {active
-                          ? <CheckCircle2 size={20} />
-                          : <Clock3 size={20} />}
-                      </div>
-
-                      {index < steps.length - 1 && (
-                        <div
-                          className={`h-14 w-0.5 ${
-                            index < currentIndex
-                              ? 'bg-[#167D61]'
-                              : 'bg-gray-200'
-                          }`}
-                        />
-                      )}
-                    </div>
-
-                    <div className="pb-7">
-                      <p
-                        className={`font-semibold ${
-                          active ? 'text-[#253B35]' : 'text-gray-400'
-                        }`}
-                      >
-                        {step.label}
-                      </p>
-
-                      {active && timestamp && (
-                        <p className="mt-1 text-sm text-gray-500">
-                          {formatDate(timestamp)}
-                        </p>
-                      )}
-
-                      {!active && (
-                        <p className="mt-1 text-sm text-gray-400">
-                          Chưa đến giai đoạn này
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </section>
-
-          </>}
-        </div>
+            {request.CollectorId && (
+              <section aria-labelledby="request-collector-title" className="flex items-center gap-3 rounded-3xl border bg-white p-4 shadow-sm sm:p-5">
+                <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[#e7f3ec] text-[#167d61]">
+                  <UserRound size={22} aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <h3 id="request-collector-title" className="text-xs font-medium text-slate-600">Người thu gom</h3>
+                  {request.CollectorName && <p className="mt-0.5 break-words text-sm font-semibold text-[#153e31]">{request.CollectorName}</p>}
+                  <p className="mt-0.5 text-xs text-slate-600">Mã nhân viên #{request.CollectorId}</p>
+                </div>
+              </section>
+            )}
+          </>
+        )}
+      </div>
     </dialog>
   )
 }

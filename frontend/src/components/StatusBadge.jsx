@@ -10,7 +10,7 @@ const statusConfig = {
   CHO_NHAN: {
     label: 'Chờ nhận',
     Icon: Clock3,
-    className: 'bg-amber-50 text-amber-700',
+    className: 'bg-warning/20 text-amber-900',
   },
   DA_NHAN: {
     label: 'Đã nhận',

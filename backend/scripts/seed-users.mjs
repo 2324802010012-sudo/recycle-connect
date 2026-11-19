@@ -71,6 +71,13 @@ function sqlValue(value) {
 }
 
 const password = process.env.DEMO_PASSWORD
+const username = process.argv[2]?.toUpperCase()
+const selectedAccounts = username ? accounts.filter(account => account.username === username) : accounts
+
+if (process.argv.length > 3 || selectedAccounts.length === 0) {
+  console.error('Cách dùng: node scripts/seed-users.mjs [D01|TG01|TG02|AD01]')
+  process.exit(1)
+}
 
 if (!password || password.length < 8 || password.length > 128) {
   console.error(
@@ -81,7 +88,7 @@ if (!password || password.length < 8 || password.length > 128) {
 
 let sql = ''
 
-for (const account of accounts) {
+for (const account of selectedAccounts) {
   const passwordHash = hashPassword(password)
 
   sql += `

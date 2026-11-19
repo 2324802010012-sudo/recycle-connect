@@ -1,7 +1,7 @@
-﻿const requestFields = [
+const requestFields = [
   'RequestId', 'CollectorId', 'CollectorName', 'WasteType', 'QuantityKg',
   'Address', 'Area', 'PreferredDate', 'Note', 'Status', 'CreatedAt',
-  'AcceptedAt', 'CompletedAt',
+  'AcceptedAt', 'CompletedAt', 'PriorityScore',
 ]
 
 function normalizeRequest(request) {
@@ -37,25 +37,6 @@ async function requestApi(path, { query, signal, method = 'GET', body } = {}) {
 export async function getRequestPage(path, query, signal) {
   const result = await requestApi(path, { query, signal })
   return { ...result, items: result.items.map(normalizeRequest) }
-}
-
-export async function getAllRequests(path, filters, signal) {
-  const query = { ...filters, page: 1, limit: 50 }
-  const first = await getRequestPage(path, query, signal)
-  const items = [...first.items]
-  const { limit, total } = first.pagination
-
-  for (let page = 2; page <= Math.ceil(total / limit); page += 1) {
-    const next = await getRequestPage(path, { ...query, page }, signal)
-    items.push(...next.items)
-  }
-
-  return [...new Map(items.map(item => [item.RequestId, item])).values()]
-}
-
-export async function getMyRequests(signal) {
-  const items = await getAllRequests('requests/mine', {}, signal)
-  return items.sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt))
 }
 
 export async function getRequestDetail(id, signal) {

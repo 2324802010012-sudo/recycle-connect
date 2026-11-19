@@ -108,6 +108,9 @@ function adminDates(params, add) {
 
 async function listRequests(db, user, params, path) {
   const { page, limit } = pagination(params)
+  const mine = path.endsWith('/mine')
+  const myStatus = mine ? filterValue(params, 'status', REQUEST_STATUSES) : null
+  const prioritize = path.endsWith('/available') && params.get('priority') === '1'
   const filters = []
   const values = []
   function add(filter, value) {
@@ -115,7 +118,10 @@ async function listRequests(db, user, params, path) {
     values.push(value)
   }
 
-  if (path.endsWith('/mine')) add('r.UserId = ?', user.UserId)
+  if (mine) {
+    add('r.UserId = ?', user.UserId)
+    if (myStatus) add('r.Status = ?', myStatus)
+  }
   if (path.endsWith('/assigned')) add('r.CollectorId = ?', user.UserId)
   if (path.endsWith('/available')) {
     add('r.Status = ?', 'CHO_NHAN')
@@ -133,14 +139,34 @@ async function listRequests(db, user, params, path) {
   }
 
   const where = filters.length ? 'WHERE ' + filters.join(' AND ') : ''
+  const summary = mine ? `COUNT(*) AS total,
+    COUNT(CASE WHEN r.Status = 'CHO_NHAN' THEN 1 END) AS CHO_NHAN,
+    COUNT(CASE WHEN r.Status = 'DA_NHAN' THEN 1 END) AS DA_NHAN,
+    COUNT(CASE WHEN r.Status = 'HOAN_THANH' THEN 1 END) AS HOAN_THANH` : 'COUNT(*) AS total'
+  const priorityField = prioritize ? `,
+    (CASE WHEN r.Area = ? THEN 50 ELSE 0 END)
+    + MAX(0, 30 - 5 * MAX(0, JULIANDAY(r.PreferredDate) - JULIANDAY(?)))
+    + MIN(20, 5 * CAST(MAX(0, (UNIXEPOCH(?, 'subsec') - UNIXEPOCH(r.CreatedAt, 'subsec')) / 43200) AS INTEGER))
+    AS PriorityScore` : ''
+  const now = new Date()
+  const scoreArgs = prioritize ? [user.ServiceArea, vietnamDate(now), now.toISOString()] : []
+  const order = prioritize
+    ? 'PriorityScore DESC, r.CreatedAt ASC, r.RequestId ASC'
+    : 'r.CreatedAt DESC, r.RequestId DESC'
   const [count, rows] = await db.batch([
-    db.prepare(`SELECT COUNT(*) AS total FROM Requests r ${where}`).bind(...values),
-    db.prepare(`SELECT ${fields} ${fromRequests} ${where}
-      ORDER BY r.CreatedAt DESC, r.RequestId DESC LIMIT ? OFFSET ?`).bind(...values, limit, (page - 1) * limit),
+    db.prepare(`SELECT ${summary} FROM Requests r ${mine ? 'WHERE r.UserId = ?' : where}`)
+      .bind(...(mine ? [user.UserId] : values)),
+    db.prepare(`SELECT ${fields} ${priorityField} ${fromRequests} ${where}
+      ORDER BY ${order} LIMIT ? OFFSET ?`).bind(...scoreArgs, ...values, limit, (page - 1) * limit),
   ])
+  const { total, ...byStatus } = count.results[0]
   return success({
-    items: rows.results.map(row => publicRequest(row, user)),
-    pagination: { page, limit, total: count.results[0].total },
+    items: rows.results.map(row => ({
+      ...publicRequest(row, user),
+      ...(prioritize ? { priorityScore: row.PriorityScore } : {}),
+    })),
+    pagination: { page, limit, total: myStatus ? byStatus[myStatus] : total },
+    ...(mine ? { byStatus } : {}),
   })
 }
 
@@ -216,19 +242,39 @@ async function transition(db, user, id, action) {
 }
 
 async function stats(db) {
-  const { results } = await db.prepare(
-    'SELECT Status, WasteType, COUNT(*) AS count FROM Requests GROUP BY Status, WasteType'
-  ).all()
+  const today = Date.parse(vietnamDate(new Date()) + 'T00:00:00+07:00')
+  const dayMs = 86400000
+  const firstDay = today - 13 * dayMs
+  const start = new Date(firstDay).toISOString()
+  const end = new Date(today + dayMs).toISOString()
+  const [summary, activity] = await db.batch([
+    db.prepare('SELECT Status, WasteType, COUNT(*) AS count FROM Requests GROUP BY Status, WasteType'),
+    db.prepare(`
+      SELECT date(CreatedAt, '+7 hours') AS day, 'created' AS metric, COUNT(*) AS count
+      FROM Requests WHERE CreatedAt >= ? AND CreatedAt < ? GROUP BY day
+      UNION ALL
+      SELECT date(CompletedAt, '+7 hours') AS day, 'completed' AS metric, COUNT(*) AS count
+      FROM Requests WHERE CompletedAt >= ? AND CompletedAt < ? GROUP BY day
+    `).bind(start, end, start, end),
+  ])
   const byStatus = Object.fromEntries(REQUEST_STATUSES.map(status => [status, 0]))
   const wasteCounts = Object.fromEntries(WASTE_TYPES.map(wasteType => [wasteType, 0]))
   let total = 0
-  for (const { Status, WasteType, count } of results) {
+  for (const { Status, WasteType, count } of summary.results) {
     byStatus[Status] += count
     wasteCounts[WasteType] += count
     total += count
   }
   const byWasteType = Object.entries(wasteCounts).map(([wasteType, count]) => ({ wasteType, count }))
-  return success({ total, byStatus, byWasteType })
+  const days = new Map(Array.from({ length: 14 }, (_, index) => {
+    const date = vietnamDate(new Date(firstDay + index * dayMs))
+    return [date, { date, created: 0, completed: 0 }]
+  }))
+  for (const { day, metric, count } of activity.results) {
+    const point = days.get(day)
+    if (point) point[metric] = count
+  }
+  return success({ total, byStatus, byWasteType, byDay: [...days.values()] })
 }
 
 export async function handleRequests(request, url, env, getUser) {

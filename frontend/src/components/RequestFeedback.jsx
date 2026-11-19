@@ -3,7 +3,7 @@
   if (!state.error) return null
 
   return (
-    <div role="alert" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
+    <div role="alert" className="rounded-xl border border-warning bg-warning/15 p-4 text-sm text-amber-900">
       {state.updatedAt && (
         <p>Chưa đồng bộ. Cập nhật lần cuối lúc {state.updatedAt.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}.</p>
       )}
