@@ -1,0 +1,13 @@
+
+{
+  "name": "recycle-connect-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-19",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "recycle-connect-db",
+      "database_id": "5b4a7a63-73fe-4614-900e-31fec2e455e2"
+    }
+  ]
+}
