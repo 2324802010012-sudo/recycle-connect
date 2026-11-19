@@ -1,4 +1,4 @@
-
+﻿
 import {
   CalendarDays,
   MapPin,
@@ -6,6 +6,7 @@ import {
   Eye,
 } from 'lucide-react'
 import StatusBadge from './StatusBadge'
+import { areaLabel } from '../services/requestOptions'
 
 const wasteLabels = {
   GIAY: 'Giấy',
@@ -42,7 +43,7 @@ function RequestCard({
 
         <p className="flex items-center gap-2">
           <MapPin size={18} className="text-[#167D61]" />
-          Khu vực: {request.Area}
+          Khu vực: {areaLabel(request.Area)}
         </p>
 
         <p className="flex items-center gap-2">

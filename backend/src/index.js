@@ -1,3 +1,4 @@
+import { handleRequests } from "./requests.js";
 
 const encoder = new TextEncoder();
 
@@ -350,13 +351,11 @@ export default {
         });
       }
 
-      return errorResponse(
-        "Không tìm thấy API.",
-        404
-      );
+      const response = await handleRequests(request, url, env, currentUser);
+      return response ?? errorResponse("Không tìm thấy API.", 404);
 
     } catch (error) {
-      console.error("API error:", error);
+      console.error("API error:", error.name);
 
       return errorResponse(
         "Lỗi xử lý yêu cầu.",

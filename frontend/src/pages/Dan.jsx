@@ -1,6 +1,6 @@
-
-import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+﻿
+import { useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   Recycle,
   Plus,
@@ -10,51 +10,31 @@ import {
   LogOut,
   ClipboardList,
 } from 'lucide-react'
-import { getCurrentUser, logout } from '../services/authService'
+import { logout } from '../services/authService'
 import EmptyState from '../components/EmptyState'
 
-function Dan() {
+import { getMyRequests } from '../services/requestService'
+import { useRequestData } from '../services/useRequestData'
+import RequestFeedback from '../components/RequestFeedback'
+import RequestPagination from '../components/RequestPagination'
+import RequestCard from '../components/RequestCard'
+import RequestDetail from '../components/RequestDetail'
+
+const PAGE_SIZE = 20
+const statuses = ['CHO_NHAN', 'DA_NHAN', 'HOAN_THANH']
+
+function Dan({ user }) {
   const navigate = useNavigate()
 
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const { state } = useLocation()
   const [error, setError] = useState('')
   const [loggingOut, setLoggingOut] = useState(false)
-
-  useEffect(() => {
-    let active = true
-
-    async function loadUser() {
-      try {
-        const data = await getCurrentUser()
-        if (!active) return
-
-        if (!data?.user) {
-          navigate('/login', { replace: true })
-          return
-        }
-
-        if (data.user.role !== 'DAN') {
-          navigate('/login', { replace: true })
-          return
-        }
-
-        setUser(data.user)
-      } catch (err) {
-        if (active) {
-          setError(err.message || 'Không thể tải tài khoản.')
-        }
-      } finally {
-        if (active) setLoading(false)
-      }
-    }
-
-    loadUser()
-
-    return () => {
-      active = false
-    }
-  }, [navigate])
+  const [selectedRequest, setSelectedRequest] = useState(null)
+  const [page, setPage] = useState(1)
+  const list = useRequestData(getMyRequests, { poll: true })
+  const requests = list.data ?? []
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(requests.length / PAGE_SIZE)))
+  const visibleRequests = requests.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   async function handleLogout() {
     setLoggingOut(true)
@@ -68,29 +48,6 @@ function Dan() {
     } finally {
       setLoggingOut(false)
     }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F8FAF9]">
-        <p role="status" className="text-[#167D61]">
-          Đang tải thông tin tài khoản...
-        </p>
-      </div>
-    )
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div role="alert" className="text-center">
-          <p>{error || 'Không thể xác thực tài khoản.'}</p>
-          <Link to="/login" className="text-[#167D61] underline">
-            Quay lại đăng nhập
-          </Link>
-        </div>
-      </div>
-    )
   }
 
   const stats = [
@@ -138,6 +95,9 @@ function Dan() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
+        {state?.requestCreated && (
+          <p role="status" className="mb-6 rounded-xl bg-[#EAF5EF] p-4">Đã tạo yêu cầu thu gom.</p>
+        )}
         {error && (
           <div role="alert" className="mb-6 rounded-xl bg-red-50 p-4 text-red-700">
             {error}
@@ -173,7 +133,7 @@ function Dan() {
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {stats.map(({ title, Icon, color, background }) => (
+            {stats.map(({ title, Icon, color, background }, index) => (
               <div
                 key={title}
                 className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm"
@@ -187,7 +147,7 @@ function Dan() {
                 </p>
 
                 <p className="mt-2 text-sm font-medium text-gray-400">
-                  Chưa tải dữ liệu
+                  {list.data ? requests.filter(request => request.Status === statuses[index]).length : '—'}
                 </p>
               </div>
             ))}
@@ -202,12 +162,25 @@ function Dan() {
             </h2>
           </div>
 
-          <EmptyState
-            title="Chưa có danh sách yêu cầu"
-            description="Danh sách sẽ được hiển thị khi kết nối API yêu cầu thu gom. Bạn có thể chuẩn bị thông tin bằng biểu mẫu tạo yêu cầu."
-          />
+          <RequestFeedback state={list} />
+          {list.data && (requests.length ? (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {visibleRequests.map(request => (
+                  <RequestCard key={request.RequestId} request={request} onView={setSelectedRequest} />
+                ))}
+              </div>
+              <RequestPagination
+                pagination={{ page: currentPage, limit: PAGE_SIZE, total: requests.length }}
+                onPage={setPage}
+              />
+            </>
+          ) : (
+            <EmptyState title="Chưa có yêu cầu" description="Đặt lịch thu gom để theo dõi tiến độ tại đây." />
+          ))}
         </section>
       </main>
+      <RequestDetail id={selectedRequest?.RequestId} onClose={() => setSelectedRequest(null)} />
     </div>
   )
 }

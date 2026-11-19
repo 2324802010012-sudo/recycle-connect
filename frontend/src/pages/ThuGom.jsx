@@ -1,82 +1,18 @@
-
-import { useEffect, useMemo, useState } from 'react'
+﻿
+import { useCallback, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  Recycle, LogOut, RefreshCw, Clock3,
-  Truck, CircleCheck, Filter, MapPin,
-  AlertCircle, Sparkles, UserRound,
-} from 'lucide-react'
+import { Recycle, LogOut, UserRound, Filter, AlertCircle, Sparkles } from 'lucide-react'
 
-import { getCurrentUser, logout } from '../services/authService'
+import { logout } from '../services/authService'
 import RequestCard from '../components/RequestCard'
 import RequestDetail from '../components/RequestDetail'
-import StatusBadge from '../components/StatusBadge'
+import { getAllRequests, getRequestPage, updateRequest } from '../services/requestService'
+import { AREA_OPTIONS, areaLabel, vietnamDate } from '../services/requestOptions'
+import { useRequestData } from '../services/useRequestData'
+import RequestFeedback from '../components/RequestFeedback'
+import RequestPagination from '../components/RequestPagination'
 
 // DỮ LIỆU MÔ PHỎNG FRONTEND
-// Chưa lấy dữ liệu từ Cloudflare D1.
-const initialRequests = [
-  {
-    RequestId: 1,
-    UserId: 1,
-    CollectorId: null,
-    WasteType: 'NHUA',
-    QuantityKg: 5,
-    Address: 'Địa chỉ thu gom mẫu 01',
-    Area: 'KHU_VUC_1',
-    PreferredDate: '2026-11-22',
-    Note: 'Chai nhựa đã phân loại',
-    Status: 'CHO_NHAN',
-    CreatedAt: '2026-11-19T08:00:00.000Z',
-    AcceptedAt: null,
-    CompletedAt: null,
-  },
-  {
-    RequestId: 2,
-    UserId: 1,
-    CollectorId: null,
-    WasteType: 'GIAY',
-    QuantityKg: 8,
-    Address: 'Địa chỉ thu gom mẫu 02',
-    Area: 'KHU_VUC_1',
-    PreferredDate: '2026-11-23',
-    Note: 'Giấy và thùng carton',
-    Status: 'CHO_NHAN',
-    CreatedAt: '2026-11-19T09:00:00.000Z',
-    AcceptedAt: null,
-    CompletedAt: null,
-  },
-  {
-    RequestId: 3,
-    UserId: 1,
-    CollectorId: 2,
-    WasteType: 'KIM_LOAI',
-    QuantityKg: 3,
-    Address: 'Địa chỉ thu gom mẫu 03',
-    Area: 'KHU_VUC_1',
-    PreferredDate: '2026-11-21',
-    Note: 'Lon nhôm',
-    Status: 'DA_NHAN',
-    CreatedAt: '2026-11-18T08:00:00.000Z',
-    AcceptedAt: '2026-11-18T10:00:00.000Z',
-    CompletedAt: null,
-  },
-  {
-    RequestId: 4,
-    UserId: 1,
-    CollectorId: 2,
-    WasteType: 'THUY_TINH',
-    QuantityKg: 6,
-    Address: 'Địa chỉ thu gom mẫu 04',
-    Area: 'KHU_VUC_1',
-    PreferredDate: '2026-11-19',
-    Note: 'Chai thủy tinh',
-    Status: 'HOAN_THANH',
-    CreatedAt: '2026-11-17T08:00:00.000Z',
-    AcceptedAt: '2026-11-17T09:00:00.000Z',
-    CompletedAt: '2026-11-19T09:00:00.000Z',
-  },
-]
-
 const wasteOptions = [
   { value: '', label: 'Tất cả loại rác' },
   { value: 'GIAY', label: 'Giấy' },
@@ -86,218 +22,87 @@ const wasteOptions = [
   { value: 'KHAC', label: 'Khác' },
 ]
 
-function getPriorityScore(request, serviceArea) {
-  const areaScore =
-    request.Area === serviceArea ? 50 : 0
+function rankAvailableRequests(requests, area, now) {
+  const today = Date.parse(vietnamDate(now))
+  const day = 86400000
+  const hour = 3600000
 
-  const today = new Date()
-  const todayUTC = Date.UTC(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate()
-  )
-
-  const preferred = new Date(
-    `${request.PreferredDate}T00:00:00Z`
-  )
-
-  const daysLeft = Math.max(
-    0,
-    Math.ceil(
-      (preferred.getTime() - todayUTC) / 86400000
-    )
-  )
-
-  const dateScore = Math.max(0, 30 - 5 * daysLeft)
-
-  const waitingHours = Math.max(
-    0,
-    (Date.now() - new Date(request.CreatedAt).getTime()) /
-      3600000
-  )
-
-  const waitingScore = Math.min(
-    20,
-    5 * Math.floor(waitingHours / 12)
-  )
-
-  return areaScore + dateScore + waitingScore
+  return requests.map(request => {
+    const created = Date.parse(request.CreatedAt)
+    const remainingDays = Math.max(0, (Date.parse(request.PreferredDate) - today) / day)
+    const waitingHours = Math.max(0, (now.getTime() - created) / hour)
+    const areaScore = area && request.Area === area ? 50 : 0
+    const score = areaScore + Math.max(0, 30 - 5 * remainingDays)
+      + Math.min(20, 5 * Math.floor(waitingHours / 12))
+    return { ...request, priorityScore: score }
+  }).sort((a, b) => b.priorityScore - a.priorityScore
+    || Date.parse(a.CreatedAt) - Date.parse(b.CreatedAt)
+    || a.RequestId - b.RequestId)
 }
 
-function ThuGom() {
+function ThuGom({ user }) {
   const navigate = useNavigate()
-
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [requests, setRequests] = useState(initialRequests)
+  const [notice, setNotice] = useState('')
   const [selectedRequest, setSelectedRequest] = useState(null)
-
   const [activeTab, setActiveTab] = useState('CHO_NHAN')
   const [wasteFilter, setWasteFilter] = useState('')
   const [areaFilter, setAreaFilter] = useState('')
+  const [page, setPage] = useState(1)
   const [priorityEnabled, setPriorityEnabled] = useState(false)
   const [busyId, setBusyId] = useState(null)
-  const [notice, setNotice] = useState('')
+  const pending = useRef(false)
+  const available = activeTab === 'CHO_NHAN'
+  const serviceArea = areaLabel(user.serviceArea)
+  const loadRequests = useCallback(async signal => {
+    const limit = 20
+    if (!available) return getRequestPage('requests/assigned', { page, limit }, signal)
+    const filters = { wasteType: wasteFilter, area: areaFilter }
+    if (!priorityEnabled) return getRequestPage('requests/available', { ...filters, page, limit }, signal)
 
-  useEffect(() => {
-    let active = true
-
-    async function checkAuth() {
-      try {
-        const result = await getCurrentUser()
-        const account = result?.user ?? result
-
-        if (!active) return
-
-        if (!account) {
-          navigate('/login', { replace: true })
-          return
-        }
-
-        if (account.role !== 'THUGOM') {
-          navigate(
-            account.role === 'DAN'
-              ? '/dan'
-              : account.role === 'ADMIN'
-                ? '/admin'
-                : '/login',
-            { replace: true }
-          )
-          return
-        }
-
-        setUser(account)
-      } catch (err) {
-        if (active) {
-          setError(err.message || 'Không thể tải tài khoản.')
-        }
-      } finally {
-        if (active) setLoading(false)
-      }
+    const requests = await getAllRequests('requests/available', filters, signal)
+    const ranked = rankAvailableRequests(requests, user.serviceArea, new Date())
+    const currentPage = Math.min(page, Math.max(1, Math.ceil(ranked.length / limit)))
+    return {
+      items: ranked.slice((currentPage - 1) * limit, currentPage * limit),
+      pagination: { page: currentPage, limit, total: ranked.length },
     }
+  }, [available, page, wasteFilter, areaFilter, priorityEnabled, user.serviceArea])
+  const list = useRequestData(loadRequests, { poll: true })
+  const filteredRequests = list.data?.items ?? []
 
-    checkAuth()
-
-    return () => {
-      active = false
-    }
-  }, [navigate])
-
-  const serviceArea = user?.serviceArea || ''
-
-  const areaOptions = useMemo(() => {
-    return [...new Set(requests.map(r => r.Area))]
-      .filter(Boolean)
-      .sort()
-  }, [requests])
-
-  const stats = useMemo(() => ({
-    pending: requests.filter(
-      r => r.Status === 'CHO_NHAN'
-    ).length,
-    accepted: requests.filter(
-      r => r.Status === 'DA_NHAN' &&
-        r.CollectorId === user?.userId
-    ).length,
-    completed: requests.filter(
-      r => r.Status === 'HOAN_THANH' &&
-        r.CollectorId === user?.userId
-    ).length,
-  }), [requests, user])
-
-  const filteredRequests = useMemo(() => {
-    const result = requests.filter(request => {
-      const matchingTab =
-        activeTab === 'CHO_NHAN'
-          ? request.Status === 'CHO_NHAN'
-          : request.CollectorId === user?.userId &&
-            ['DA_NHAN', 'HOAN_THANH'].includes(request.Status)
-
-      return (
-        matchingTab &&
-        (!wasteFilter || request.WasteType === wasteFilter) &&
-        (!areaFilter || request.Area === areaFilter)
-      )
-    })
-
-    if (priorityEnabled && activeTab === 'CHO_NHAN') {
-      return result.sort((a, b) => {
-        const scoreDiff =
-          getPriorityScore(b, serviceArea) -
-          getPriorityScore(a, serviceArea)
-
-        if (scoreDiff !== 0) return scoreDiff
-
-        const timeDiff =
-          new Date(a.CreatedAt) - new Date(b.CreatedAt)
-
-        return timeDiff || a.RequestId - b.RequestId
-      })
-    }
-
-    return result.sort(
-      (a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt)
-    )
-  }, [
-    requests, activeTab, wasteFilter,
-    areaFilter, priorityEnabled, serviceArea, user,
-  ])
-
-  function handleAccept(request) {
-    if (!user || busyId !== null) return
-
-    setBusyId(request.RequestId)
-    setNotice('')
-
-    setRequests(previous =>
-      previous.map(item =>
-        item.RequestId === request.RequestId &&
-        item.Status === 'CHO_NHAN'
-          ? {
-              ...item,
-              Status: 'DA_NHAN',
-              CollectorId: user.userId,
-              AcceptedAt: new Date().toISOString(),
-            }
-          : item
-      )
-    )
-
-    setNotice(
-      'Đã mô phỏng nhận yêu cầu trên giao diện. Chưa lưu vào D1.'
-    )
-    setBusyId(null)
+  function changeTab(tab) {
+    setPage(1)
+    setActiveTab(tab)
   }
 
-  function handleComplete(request) {
-    if (
-      !user ||
-      busyId !== null ||
-      request.CollectorId !== user.userId
-    ) return
-
+  async function handleAction(request, action) {
+    if (pending.current) return
+    pending.current = true
     setBusyId(request.RequestId)
     setNotice('')
-
-    setRequests(previous =>
-      previous.map(item =>
-        item.RequestId === request.RequestId &&
-        item.Status === 'DA_NHAN' &&
-        item.CollectorId === user.userId
-          ? {
-              ...item,
-              Status: 'HOAN_THANH',
-              CompletedAt: new Date().toISOString(),
-            }
-          : item
-      )
-    )
-
-    setNotice(
-      'Đã mô phỏng hoàn thành trên giao diện. Chưa lưu vào D1.'
-    )
-    setBusyId(null)
+    setError('')
+    try {
+      await updateRequest(request.RequestId, action)
+      setNotice(action === 'accept' ? 'Đã nhận yêu cầu.' : 'Đã hoàn thành yêu cầu.')
+      list.refresh()
+    } catch (error) {
+      if (error.status === 401) {
+        navigate('/login', { replace: true })
+        return
+      }
+      if (error.status === 409) {
+        setError(action === 'accept'
+          ? 'Yêu cầu đã được tiếp nhận hoặc không còn khả dụng.'
+          : 'Trạng thái yêu cầu đã thay đổi. Danh sách đang được cập nhật.')
+        list.refresh()
+      } else {
+        setError(error.status === 403 ? 'Bạn không có quyền thực hiện thao tác này.' : error.message)
+      }
+    } finally {
+      pending.current = false
+      setBusyId(null)
+    }
   }
 
   async function handleLogout() {
@@ -307,29 +112,6 @@ function ThuGom() {
     } catch (err) {
       setError(err.message || 'Không thể đăng xuất.')
     }
-  }
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center gap-3">
-        <RefreshCw className="animate-spin text-[#167D61]" />
-        Đang kiểm tra phiên đăng nhập...
-      </div>
-    )
-  }
-
-  if (!user) {
-    return (
-      <div className="p-8 text-center text-red-600">
-        {error || 'Không thể xác thực tài khoản.'}
-        <button
-          onClick={() => navigate('/login')}
-          className="ml-3 underline"
-        >
-          Đăng nhập
-        </button>
-      </div>
-    )
   }
 
   return (
@@ -373,10 +155,7 @@ function ThuGom() {
           </div>
         </section>
 
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-          Chế độ xem trước Frontend: dữ liệu yêu cầu và
-          thao tác nhận/hoàn thành đang được mô phỏng.
-        </div>
+
 
         {error && (
           <p role="alert" className="rounded-xl bg-red-50 p-4 text-red-600">
@@ -390,67 +169,35 @@ function ThuGom() {
           </p>
         )}
 
-        <section className="grid gap-4 sm:grid-cols-3">
-          {[
-            {
-              label: 'Chờ nhận',
-              value: stats.pending,
-              Icon: Clock3,
-              color: 'text-amber-600',
-            },
-            {
-              label: 'Đã nhận',
-              value: stats.accepted,
-              Icon: Truck,
-              color: 'text-blue-600',
-            },
-            {
-              label: 'Hoàn thành',
-              value: stats.completed,
-              Icon: CircleCheck,
-              color: 'text-[#167D61]',
-            },
-          ].map(item => (
-            <div
-              key={item.label}
-              className="rounded-2xl border bg-white p-5 shadow-sm"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-gray-500">{item.label}</span>
-                <item.Icon size={24} className={item.color} />
-              </div>
-              <p className="mt-3 text-3xl font-bold">
-                {item.value}
-              </p>
-            </div>
-          ))}
-        </section>
 
         <section className="rounded-2xl border bg-white p-5">
           <div className="mb-5 flex flex-wrap gap-3">
             <button
-              onClick={() => setActiveTab('CHO_NHAN')}
+              aria-pressed={available}
+              onClick={() => changeTab('CHO_NHAN')}
               className={`rounded-xl px-5 py-3 font-medium ${
                 activeTab === 'CHO_NHAN'
                   ? 'bg-[#167D61] text-white'
                   : 'bg-gray-100 text-gray-600'
               }`}
             >
-              Đơn chờ nhận ({stats.pending})
+              Đơn chờ nhận
             </button>
 
             <button
-              onClick={() => setActiveTab('DA_NHAN')}
+              aria-pressed={!available}
+              onClick={() => changeTab('DA_NHAN')}
               className={`rounded-xl px-5 py-3 font-medium ${
                 activeTab === 'DA_NHAN'
                   ? 'bg-[#167D61] text-white'
                   : 'bg-gray-100 text-gray-600'
               }`}
             >
-              Đơn đã nhận ({stats.accepted + stats.completed})
+              Đơn đã nhận
             </button>
           </div>
 
+          {available && <div>
           <div className="mb-5 flex items-center gap-2 font-semibold">
             <Filter size={20} />
             Bộ lọc yêu cầu
@@ -464,7 +211,7 @@ function ThuGom() {
               <select
                 id="waste-filter"
                 value={wasteFilter}
-                onChange={e => setWasteFilter(e.target.value)}
+                onChange={e => { setWasteFilter(e.target.value); setPage(1) }}
                 className="w-full rounded-xl border p-3"
               >
                 {wasteOptions.map(option => (
@@ -482,33 +229,27 @@ function ThuGom() {
               <select
                 id="area-filter"
                 value={areaFilter}
-                onChange={e => setAreaFilter(e.target.value)}
+                onChange={e => { setAreaFilter(e.target.value); setPage(1) }}
                 className="w-full rounded-xl border p-3"
               >
                 <option value="">Tất cả khu vực</option>
-                {areaOptions.map(area => (
-                  <option key={area} value={area}>
-                    {area}
+                {AREA_OPTIONS.map(area => (
+                  <option key={area.value} value={area.value}>
+                    {area.label}
                   </option>
                 ))}
               </select>
             </div>
           </div>
 
-          {activeTab === 'CHO_NHAN' && (
-            <label className="mt-5 flex cursor-pointer items-center gap-3">
-              <input
-                type="checkbox"
-                checked={priorityEnabled}
-                onChange={e => setPriorityEnabled(e.target.checked)}
-                className="h-4 w-4 accent-[#167D61]"
-              />
-              <Sparkles size={19} className="text-amber-600" />
-              <span className="font-medium">
-                Bật gợi ý yêu cầu ưu tiên (F12 - P1)
-              </span>
-            </label>
-          )}
+          <label className="mt-5 flex items-center gap-3 font-medium">
+            <input type="checkbox" checked={priorityEnabled}
+              onChange={event => { setPriorityEnabled(event.target.checked); setPage(1) }}
+              className="h-4 w-4 accent-[#167D61]" />
+            <Sparkles size={18} aria-hidden="true" />
+            Gợi ý yêu cầu ưu tiên
+          </label>
+          </div>}
         </section>
 
         <section>
@@ -518,7 +259,8 @@ function ThuGom() {
               : 'Danh sách yêu cầu đã nhận'}
           </h2>
 
-          {filteredRequests.length === 0 ? (
+          <RequestFeedback state={list} />
+          {list.data && (filteredRequests.length === 0 ? (
             <div className="rounded-2xl border bg-white p-10 text-center">
               <AlertCircle
                 size={36}
@@ -530,22 +272,13 @@ function ThuGom() {
             </div>
           ) : (
             <div className="grid gap-5 lg:grid-cols-2">
-              {filteredRequests.map(request => {
-                const score = getPriorityScore(
-                  request,
-                  serviceArea
-                )
-
-                return (
+              {filteredRequests.map(request => (
                   <div key={request.RequestId}>
-                    {priorityEnabled &&
-                      activeTab === 'CHO_NHAN' && (
-                        <div className="mb-2 flex items-center gap-2 text-sm text-amber-700">
-                          <Sparkles size={16} />
-                          Điểm ưu tiên: {score}/100
-                        </div>
-                      )}
-
+                    {request.priorityScore != null && (
+                      <p className="mb-2 text-sm font-medium text-amber-800">
+                        Điểm ưu tiên: {request.priorityScore}/100
+                      </p>
+                    )}
                     <RequestCard
                       request={request}
                       onView={setSelectedRequest}
@@ -554,35 +287,34 @@ function ThuGom() {
                           <button
                             type="button"
                             disabled={busyId !== null}
-                            onClick={() => handleAccept(request)}
+                            onClick={() => handleAction(request, 'accept')}
                             className="rounded-xl bg-[#167D61] px-4 py-2 font-medium text-white hover:bg-[#11634D] disabled:opacity-50"
                           >
-                            Nhận yêu cầu
+                            {busyId === request.RequestId ? 'Đang nhận…' : 'Nhận yêu cầu'}
                           </button>
                         ) : request.Status === 'DA_NHAN' &&
-                          request.CollectorId === user.userId ? (
+                          String(request.CollectorId) === String(user.userId) ? (
                           <button
                             type="button"
                             disabled={busyId !== null}
-                            onClick={() => handleComplete(request)}
+                            onClick={() => handleAction(request, 'complete')}
                             className="rounded-xl bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                           >
-                            Hoàn thành
+                            {busyId === request.RequestId ? 'Đang xác nhận…' : 'Hoàn thành'}
                           </button>
                         ) : null
                       }
                     />
                   </div>
-                )
-              })}
+              ))}
             </div>
-          )}
+          ))}
+          <RequestPagination pagination={list.data?.pagination} onPage={setPage} />
         </section>
       </main>
 
       <RequestDetail
-        request={selectedRequest}
-        role="THUGOM"
+        id={selectedRequest?.RequestId}
         onClose={() => setSelectedRequest(null)}
       />
     </div>

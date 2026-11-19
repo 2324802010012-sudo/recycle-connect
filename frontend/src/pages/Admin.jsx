@@ -1,96 +1,23 @@
-
-import { useEffect, useMemo, useState } from 'react'
+﻿
+import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Recycle, LogOut, LayoutDashboard,
   Clock3, Truck, CircleCheck,
   ClipboardList, Filter, Eye,
-  RefreshCw, AlertCircle, BarChart3,
-  UserRound,
+  AlertCircle, BarChart3,
 } from 'lucide-react'
 
-import { getCurrentUser, logout } from '../services/authService'
+import { logout } from '../services/authService'
 import RequestDetail from '../components/RequestDetail'
 import StatusBadge from '../components/StatusBadge'
 
-// Dữ liệu mô phỏng - chưa kết nối D1.
-const initialRequests = [
-  {
-    RequestId: 1,
-    UserId: 1,
-    CollectorId: null,
-    WasteType: 'NHUA',
-    QuantityKg: 5,
-    Address: 'Địa chỉ thu gom mẫu 01',
-    Area: 'KHU_VUC_1',
-    PreferredDate: '2026-11-22',
-    Note: 'Chai nhựa',
-    Status: 'CHO_NHAN',
-    CreatedAt: '2026-11-19T08:00:00.000Z',
-    AcceptedAt: null,
-    CompletedAt: null,
-  },
-  {
-    RequestId: 2,
-    UserId: 1,
-    CollectorId: null,
-    WasteType: 'GIAY',
-    QuantityKg: 8,
-    Address: 'Địa chỉ thu gom mẫu 02',
-    Area: 'KHU_VUC_1',
-    PreferredDate: '2026-11-23',
-    Note: 'Thùng carton',
-    Status: 'CHO_NHAN',
-    CreatedAt: '2026-11-19T09:00:00.000Z',
-    AcceptedAt: null,
-    CompletedAt: null,
-  },
-  {
-    RequestId: 3,
-    UserId: 1,
-    CollectorId: 2,
-    WasteType: 'KIM_LOAI',
-    QuantityKg: 3,
-    Address: 'Địa chỉ thu gom mẫu 03',
-    Area: 'KHU_VUC_1',
-    PreferredDate: '2026-11-21',
-    Note: 'Lon nhôm',
-    Status: 'DA_NHAN',
-    CreatedAt: '2026-11-18T08:00:00.000Z',
-    AcceptedAt: '2026-11-18T10:00:00.000Z',
-    CompletedAt: null,
-  },
-  {
-    RequestId: 4,
-    UserId: 1,
-    CollectorId: 2,
-    WasteType: 'THUY_TINH',
-    QuantityKg: 6,
-    Address: 'Địa chỉ thu gom mẫu 04',
-    Area: 'KHU_VUC_1',
-    PreferredDate: '2026-11-19',
-    Note: 'Chai thủy tinh',
-    Status: 'HOAN_THANH',
-    CreatedAt: '2026-11-17T08:00:00.000Z',
-    AcceptedAt: '2026-11-17T09:00:00.000Z',
-    CompletedAt: '2026-11-19T09:00:00.000Z',
-  },
-  {
-    RequestId: 5,
-    UserId: 1,
-    CollectorId: null,
-    WasteType: 'KHAC',
-    QuantityKg: 4,
-    Address: 'Địa chỉ thu gom mẫu 05',
-    Area: 'KHU_VUC_2',
-    PreferredDate: '2026-11-24',
-    Note: 'Vật liệu tái chế khác',
-    Status: 'CHO_NHAN',
-    CreatedAt: '2026-11-19T11:00:00.000Z',
-    AcceptedAt: null,
-    CompletedAt: null,
-  },
-]
+import { getAdminStats, getRequestPage } from '../services/requestService'
+import { areaLabel } from '../services/requestOptions'
+import RequestCard from '../components/RequestCard'
+import { useRequestData } from '../services/useRequestData'
+import RequestFeedback from '../components/RequestFeedback'
+import RequestPagination from '../components/RequestPagination'
 
 const wasteLabels = {
   GIAY: 'Giấy',
@@ -135,138 +62,31 @@ function formatDate(value) {
   })
 }
 
-function Admin() {
+function Admin({ user }) {
   const navigate = useNavigate()
 
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-
-  const [requests] = useState(initialRequests)
   const [selectedRequest, setSelectedRequest] = useState(null)
-
   const [statusFilter, setStatusFilter] = useState('')
   const [wasteFilter, setWasteFilter] = useState('')
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
-  const [search, setSearch] = useState('')
-
-  useEffect(() => {
-    let active = true
-
-    async function checkAuth() {
-      try {
-        const result = await getCurrentUser()
-        const account = result?.user ?? result
-
-        if (!active) return
-
-        if (!account) {
-          navigate('/login', { replace: true })
-          return
-        }
-
-        if (account.role !== 'ADMIN') {
-          navigate(
-            account.role === 'DAN'
-              ? '/dan'
-              : account.role === 'THUGOM'
-                ? '/thugom'
-                : '/login',
-            { replace: true }
-          )
-          return
-        }
-
-        setUser(account)
-      } catch (err) {
-        if (active) {
-          setError(err.message || 'Không thể tải tài khoản.')
-        }
-      } finally {
-        if (active) setLoading(false)
-      }
-    }
-
-    checkAuth()
-
-    return () => {
-      active = false
-    }
-  }, [navigate])
-
-  const stats = useMemo(() => {
-    return {
-      CHO_NHAN: requests.filter(
-        r => r.Status === 'CHO_NHAN'
-      ).length,
-      DA_NHAN: requests.filter(
-        r => r.Status === 'DA_NHAN'
-      ).length,
-      HOAN_THANH: requests.filter(
-        r => r.Status === 'HOAN_THANH'
-      ).length,
-    }
-  }, [requests])
-
-  const total = requests.length
-
-  const filteredRequests = useMemo(() => {
-    return requests
-      .filter(request => {
-        const matchesStatus =
-          !statusFilter || request.Status === statusFilter
-
-        const matchesWaste =
-          !wasteFilter || request.WasteType === wasteFilter
-
-        // So sánh ngày theo múi giờ Việt Nam.
-        const createdDate = new Date(
-          request.CreatedAt
-        ).toLocaleDateString('en-CA', {
-          timeZone: 'Asia/Ho_Chi_Minh',
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-        })
-
-        const matchesFrom =
-          !fromDate || createdDate >= fromDate
-
-        const matchesTo =
-          !toDate || createdDate <= toDate
-
-        const keyword = search.trim().toLowerCase()
-
-        const matchesSearch =
-          !keyword ||
-          String(request.RequestId).includes(keyword) ||
-          String(request.Area).toLowerCase().includes(keyword) ||
-          String(request.Address).toLowerCase().includes(keyword)
-
-        return (
-          matchesStatus &&
-          matchesWaste &&
-          matchesFrom &&
-          matchesTo &&
-          matchesSearch
-        )
-      })
-      .sort(
-        (a, b) =>
-          new Date(b.CreatedAt) - new Date(a.CreatedAt)
-      )
-  }, [
-    requests, statusFilter, wasteFilter,
-    fromDate, toDate, search,
-  ])
+  const [page, setPage] = useState(1)
+  const loadRequests = useCallback(signal => getRequestPage('admin/requests', {
+    status: statusFilter, wasteType: wasteFilter, from: fromDate, to: toDate, page, limit: 20,
+  }, signal), [statusFilter, wasteFilter, fromDate, toDate, page])
+  const list = useRequestData(loadRequests)
+  const statistics = useRequestData(getAdminStats)
+  const stats = statistics.data?.byStatus ?? {}
+  const total = statistics.data?.total ?? 0
+  const filteredRequests = list.data?.items ?? []
 
   function resetFilters() {
     setStatusFilter('')
     setWasteFilter('')
     setFromDate('')
     setToDate('')
-    setSearch('')
+    setPage(1)
   }
 
   async function handleLogout() {
@@ -276,29 +96,6 @@ function Admin() {
     } catch (err) {
       setError(err.message || 'Không thể đăng xuất.')
     }
-  }
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center gap-3">
-        <RefreshCw className="animate-spin text-[#167D61]" />
-        Đang kiểm tra phiên đăng nhập...
-      </div>
-    )
-  }
-
-  if (!user) {
-    return (
-      <div className="p-8 text-center text-red-600">
-        {error || 'Không thể xác thực tài khoản.'}
-        <button
-          onClick={() => navigate('/login')}
-          className="ml-3 underline"
-        >
-          Đăng nhập
-        </button>
-      </div>
-    )
   }
 
   return (
@@ -353,10 +150,7 @@ function Admin() {
           </div>
         </section>
 
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-          Chế độ xem trước Frontend: số liệu và biểu đồ
-          được tính từ dữ liệu mẫu, chưa lấy từ Cloudflare D1.
-        </div>
+        <RequestFeedback state={statistics} />
 
         {error && (
           <p
@@ -404,14 +198,14 @@ function Admin() {
               </div>
 
               <p className="mt-4 text-4xl font-bold">
-                {item.value}
+                {item.value ?? '—'}
               </p>
             </div>
           ))}
         </section>
 
         {/* BIỂU ĐỒ */}
-        <section className="rounded-2xl border bg-white p-6 shadow-sm">
+        {statistics.data && <section className="rounded-2xl border bg-white p-6 shadow-sm">
           <div className="mb-6 flex items-center gap-3">
             <BarChart3
               size={24}
@@ -455,7 +249,27 @@ function Admin() {
               )
             })}
           </div>
-        </section>
+        </section>}
+
+        {statistics.data?.byWasteType?.length > 0 && (
+          <section className="rounded-2xl border bg-white p-6 shadow-sm">
+            <h3 className="mb-5 text-xl font-bold">Yêu cầu theo loại rác</h3>
+            <div className="space-y-4">
+              {statistics.data.byWasteType.map(({ wasteType, count }) => (
+                <div key={wasteType}>
+                  <div className="mb-1 flex justify-between gap-3 text-sm">
+                    <span>{wasteLabels[wasteType] ?? wasteType}</span>
+                    <span>{count} yêu cầu</span>
+                  </div>
+                  <div aria-hidden="true" className="h-3 overflow-hidden rounded-full bg-gray-100">
+                    <div className="h-full rounded-full bg-[#167D61]"
+                      style={{ width: `${total ? (count / total) * 100 : 0}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* BỘ LỌC */}
         <section className="rounded-2xl border bg-white p-6 shadow-sm">
@@ -481,7 +295,7 @@ function Admin() {
               <select
                 id="admin-status"
                 value={statusFilter}
-                onChange={e => setStatusFilter(e.target.value)}
+                onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
                 className="w-full rounded-xl border p-3"
               >
                 <option value="">Tất cả trạng thái</option>
@@ -502,7 +316,7 @@ function Admin() {
               <select
                 id="admin-waste"
                 value={wasteFilter}
-                onChange={e => setWasteFilter(e.target.value)}
+                onChange={e => { setWasteFilter(e.target.value); setPage(1) }}
                 className="w-full rounded-xl border p-3"
               >
                 <option value="">Tất cả loại rác</option>
@@ -529,7 +343,7 @@ function Admin() {
                 type="date"
                 value={fromDate}
                 max={toDate || undefined}
-                onChange={e => setFromDate(e.target.value)}
+                onChange={e => { setFromDate(e.target.value); setPage(1) }}
                 className="w-full rounded-xl border p-3"
               />
             </div>
@@ -547,22 +361,13 @@ function Admin() {
                 type="date"
                 value={toDate}
                 min={fromDate || undefined}
-                onChange={e => setToDate(e.target.value)}
+                onChange={e => { setToDate(e.target.value); setPage(1) }}
                 className="w-full rounded-xl border p-3"
               />
             </div>
           </div>
 
           <div className="mt-5 flex flex-wrap gap-3">
-            <input
-              type="search"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Tìm mã yêu cầu, khu vực, địa chỉ..."
-              aria-label="Tìm kiếm yêu cầu"
-              className="min-w-0 flex-1 rounded-xl border p-3"
-            />
-
             <button
               onClick={resetFilters}
               className="rounded-xl border px-5 py-3 font-medium hover:bg-gray-50"
@@ -590,7 +395,8 @@ function Admin() {
             </span>
           </div>
 
-          {filteredRequests.length === 0 ? (
+          <RequestFeedback state={list} />
+          {list.data && (filteredRequests.length === 0 ? (
             <div className="p-12 text-center">
               <AlertCircle
                 size={36}
@@ -601,7 +407,13 @@ function Admin() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            <div className="grid gap-3 p-4 lg:hidden">
+              {filteredRequests.map(request => (
+                <RequestCard key={request.RequestId} request={request} onView={setSelectedRequest} />
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto lg:block">
               <table className="w-full min-w-[900px] text-left text-sm">
                 <thead className="bg-[#EAF5EF] text-[#253B35]">
                   <tr>
@@ -635,7 +447,7 @@ function Admin() {
                       </td>
 
                       <td className="p-4">
-                        {request.Area}
+                        {areaLabel(request.Area)}
                       </td>
 
                       <td className="p-4">
@@ -661,7 +473,9 @@ function Admin() {
                 </tbody>
               </table>
             </div>
-          )}
+            </>
+          ))}
+          <RequestPagination pagination={list.data?.pagination} onPage={setPage} />
         </section>
 
         <footer className="pb-4 text-center text-sm text-gray-400">
@@ -670,8 +484,7 @@ function Admin() {
       </main>
 
       <RequestDetail
-        request={selectedRequest}
-        role="ADMIN"
+        id={selectedRequest?.RequestId}
         onClose={() => setSelectedRequest(null)}
       />
     </div>

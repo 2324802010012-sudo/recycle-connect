@@ -1,11 +1,12 @@
-
+﻿
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, LockKeyhole, UserRound, Recycle } from 'lucide-react'
 import { login } from '../services/authService'
 
 function Login() {
   const navigate = useNavigate()
+  const { state } = useLocation()
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -25,16 +26,15 @@ function Login() {
     setLoading(true)
 
     try {
-    const data = await login(username.trim(), password)
+      const data = await login(username.trim(), password)
+      if (!data?.success || !data.user) {
+        throw new Error('Đăng nhập không thành công.')
+      }
 
-if (!data.success || !data.user) {
-  throw new Error('Đăng nhập không thành công.')
-}
-
-const user = data.user
+      const user = data.user
 
       if (user.role === 'DAN') {
-        navigate('/dan', { replace: true })
+        navigate(state?.from === '/dan/tao-yeu-cau' ? state.from : '/dan', { replace: true })
       } else if (user.role === 'THUGOM') {
         navigate('/thugom', { replace: true })
       } else if (user.role === 'ADMIN') {

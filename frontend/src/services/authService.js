@@ -1,4 +1,4 @@
-
+﻿
 async function parseResponse(response) {
   const data = await response.json().catch(() => null)
 
@@ -20,6 +20,7 @@ export async function login(username, password) {
       'Content-Type': 'application/json',
     },
     credentials: 'same-origin',
+    signal: AbortSignal.timeout(15000),
     body: JSON.stringify({ username, password }),
   })
 
@@ -30,6 +31,7 @@ export async function getCurrentUser() {
   const response = await fetch('/api/auth/me', {
     method: 'GET',
     credentials: 'same-origin',
+    signal: AbortSignal.timeout(15000),
     cache: 'no-store',
   })
 
@@ -42,6 +44,7 @@ export async function logout() {
   const response = await fetch('/api/auth/logout', {
     method: 'POST',
     credentials: 'same-origin',
+    signal: AbortSignal.timeout(15000),
   })
 
   if (!response.ok) {

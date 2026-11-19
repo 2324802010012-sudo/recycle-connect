@@ -1,4 +1,4 @@
-
+﻿
 import { useEffect, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { getCurrentUser } from '../services/authService'
@@ -96,7 +96,7 @@ function ProtectedRoute({ children, allowedRoles = [] }) {
     )
   }
 
-  return children
+  return children(user)
 }
 
 export default ProtectedRoute

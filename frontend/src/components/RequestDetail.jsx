@@ -1,15 +1,17 @@
-
-import { useEffect } from 'react'
+﻿
+import { useCallback, useEffect, useRef } from 'react'
 import {
   X,
-  MapPin,
-  CalendarDays,
-  Scale,
   UserRound,
   Clock3,
   CheckCircle2,
 } from 'lucide-react'
 import StatusBadge from './StatusBadge'
+
+import { getRequestDetail } from '../services/requestService'
+import { areaLabel } from '../services/requestOptions'
+import { useRequestData } from '../services/useRequestData'
+import RequestFeedback from './RequestFeedback'
 
 const wasteLabels = {
   GIAY: 'Giấy',
@@ -34,7 +36,7 @@ function formatDate(value) {
     return value
   }
 
-  return date.toLocaleString('vi-VN')
+  return date.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
 }
 
 function DetailRow({ label, value }) {
@@ -52,64 +54,57 @@ function DetailRow({ label, value }) {
   )
 }
 
-function RequestDetail({
-  request,
-  onClose,
-  role,
-}) {
+function RequestDetail({ id, onClose }) {
+  const dialog = useRef(null)
+  const load = useCallback(signal => getRequestDetail(id, signal), [id])
+  const state = useRequestData(load, { enabled: id != null, poll: true })
+  const request = state.data
+
   useEffect(() => {
-    if (!request) return
-
-    function handleKeyDown(event) {
-      if (event.key === 'Escape') {
-        onClose?.()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-
+    const element = dialog.current
+    if (id == null || !element) return
+    const trigger = document.activeElement
+    element.showModal()
     return () => {
-      window.removeEventListener('keydown', handleKeyDown)
+      element.close()
+      trigger?.focus()
     }
-  }, [request, onClose])
+  }, [id])
 
-  if (!request) return null
+  if (id == null) return null
 
   const currentIndex = steps.findIndex(
-    step => step.status === request.Status
+    step => step.status === request?.Status
   )
 
   const timestamps = {
-    CHO_NHAN: request.CreatedAt,
-    DA_NHAN: request.AcceptedAt,
-    HOAN_THANH: request.CompletedAt,
+    CHO_NHAN: request?.CreatedAt,
+    DA_NHAN: request?.AcceptedAt,
+    HOAN_THANH: request?.CompletedAt,
   }
 
-  // Chỉ hiển thị dữ liệu mà API đã cho phép vai trò này xem.
-  // Không tự suy ra thông tin người thu gom.
-  const showCollector = Boolean(request.CollectorId)
+  const showCollector = Boolean(request?.CollectorId)
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/40"
-      onMouseDown={event => {
+    <dialog
+      ref={dialog}
+      aria-labelledby="request-detail-title"
+      onCancel={event => { event.preventDefault(); onClose() }}
+      onClick={event => {
         if (event.target === event.currentTarget) {
-          onClose?.()
+          const bounds = event.currentTarget.getBoundingClientRect()
+          if (event.clientX < bounds.left || event.clientX > bounds.right ||
+              event.clientY < bounds.top || event.clientY > bounds.bottom) onClose()
         }
       }}
+      className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none overflow-y-auto bg-white shadow-2xl backdrop:bg-black/40 md:left-auto md:w-full md:max-w-xl"
     >
-      <aside
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="request-detail-title"
-        className="absolute inset-0 overflow-y-auto bg-white shadow-2xl md:inset-y-0 md:left-auto md:right-0 md:w-full md:max-w-xl"
-      >
         <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-5 py-4">
           <h2
             id="request-detail-title"
             className="text-xl font-bold text-[#167D61]"
           >
-            Chi tiết yêu cầu #{request.RequestId}
+            Chi tiết yêu cầu #{id}
           </h2>
 
           <button
@@ -123,6 +118,8 @@ function RequestDetail({
         </div>
 
         <div className="space-y-7 p-5 md:p-7">
+          <RequestFeedback state={state} />
+          {request && <>
           <section>
             <h3 className="mb-4 text-lg font-bold">
               Thông tin yêu cầu
@@ -141,7 +138,7 @@ function RequestDetail({
               />
               <DetailRow
                 label="Khu vực"
-                value={request.Area}
+                value={areaLabel(request.Area)}
               />
               <DetailRow
                 label="Địa chỉ thu gom"
@@ -157,7 +154,7 @@ function RequestDetail({
               />
               <DetailRow
                 label="Ngày tạo"
-                value={formatDate(request.CreatedAt)}
+                value={formatDate(request?.CreatedAt)}
               />
             </div>
           </section>
@@ -244,20 +241,9 @@ function RequestDetail({
             </div>
           </section>
 
-          <div className="rounded-xl border border-gray-200 p-4 text-sm text-gray-500">
-            Vai trò đang xem: {
-              role === 'DAN'
-                ? 'Người dân'
-                : role === 'THUGOM'
-                  ? 'Người thu gom'
-                  : role === 'ADMIN'
-                    ? 'Quản trị viên'
-                    : 'Chưa xác định'
-            }
-          </div>
+          </>}
         </div>
-      </aside>
-    </div>
+    </dialog>
   )
 }
 

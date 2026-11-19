@@ -1,6 +1,6 @@
-
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+﻿
+import { useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
   ArrowRight,
@@ -8,6 +8,9 @@ import {
   ClipboardCheck,
   Recycle,
 } from 'lucide-react'
+
+import { createRequest } from '../services/requestService'
+import { AREA_OPTIONS, areaLabel, vietnamDate } from '../services/requestOptions'
 
 const wasteTypes = [
   { value: 'GIAY', label: 'Giấy' },
@@ -30,13 +33,12 @@ function TaoYeuCau() {
   const [step, setStep] = useState(1)
   const [form, setForm] = useState(initialForm)
   const [error, setError] = useState('')
+  const [invalidField, setInvalidField] = useState('')
 
-  const today = new Date()
-  const localToday = [
-    today.getFullYear(),
-    String(today.getMonth() + 1).padStart(2, '0'),
-    String(today.getDate()).padStart(2, '0'),
-  ].join('-')
+  const navigate = useNavigate()
+  const [localToday] = useState(() => vietnamDate(new Date()))
+  const [submitting, setSubmitting] = useState(false)
+  const pending = useRef(false)
 
   function updateField(field, value) {
     setForm(prev => ({
@@ -44,6 +46,7 @@ function TaoYeuCau() {
       [field]: value,
     }))
     setError('')
+    setInvalidField('')
   }
 
   function validateStep() {
@@ -51,7 +54,7 @@ function TaoYeuCau() {
       const kg = Number(form.QuantityKg)
 
       if (!wasteTypes.some(item => item.value === form.WasteType)) {
-        return 'Vui lòng chọn loại rác tái chế.'
+        return { field: 'WasteType', message: 'Vui lòng chọn loại rác tái chế.' }
       }
 
       if (
@@ -60,7 +63,7 @@ function TaoYeuCau() {
         kg <= 0 ||
         kg > 1000
       ) {
-        return 'Khối lượng phải lớn hơn 0 và không vượt quá 1000 kg.'
+        return { field: 'QuantityKg', message: 'Khối lượng phải lớn hơn 0 và không vượt quá 1000 kg.' }
       }
     }
 
@@ -69,38 +72,40 @@ function TaoYeuCau() {
       const area = form.Area.trim()
 
       if (address.length < 5 || address.length > 200) {
-        return 'Địa chỉ phải có từ 5 đến 200 ký tự.'
+        return { field: 'Address', message: 'Địa chỉ phải có từ 5 đến 200 ký tự.' }
       }
 
-      if (!area) {
-        return 'Vui lòng nhập khu vực thu gom.'
+      if (!AREA_OPTIONS.some(option => option.value === area)) {
+        return { field: 'Area', message: 'Vui lòng chọn khu vực thu gom.' }
       }
 
       if (!form.PreferredDate) {
-        return 'Vui lòng chọn ngày mong muốn.'
+        return { field: 'PreferredDate', message: 'Vui lòng chọn ngày mong muốn.' }
       }
 
-      if (form.PreferredDate < localToday) {
-        return 'Ngày mong muốn không được trước ngày hiện tại.'
+      if (form.PreferredDate < vietnamDate(new Date())) {
+        return { field: 'PreferredDate', message: 'Ngày mong muốn không được trước ngày hiện tại.' }
       }
 
       if (form.Note.length > 500) {
-        return 'Ghi chú không được vượt quá 500 ký tự.'
+        return { field: 'Note', message: 'Ghi chú không được vượt quá 500 ký tự.' }
       }
     }
 
-    return ''
+    return null
   }
 
   function nextStep() {
-    const message = validateStep()
+    const failure = validateStep()
 
-    if (message) {
-      setError(message)
+    if (failure) {
+      setInvalidField(failure.field)
+      setError(failure.message)
       return
     }
 
     setError('')
+    setInvalidField('')
     setStep(prev => Math.min(prev + 1, 3))
   }
 
@@ -109,18 +114,44 @@ function TaoYeuCau() {
     setStep(prev => Math.max(prev - 1, 1))
   }
 
-  function handleSubmit(e) {
-    e.preventDefault()
-
+  async function handleSubmit(event) {
+    event.preventDefault()
+    if (pending.current) return
     if (step < 3) {
       nextStep()
       return
     }
 
-    // Chưa gọi API khi Backend tạo yêu cầu chưa triển khai.
-    setError(
-      'Giao diện đã hoàn tất. Chức năng gửi yêu cầu sẽ được kích hoạt sau khi kết nối API.'
-    )
+    if (form.PreferredDate < vietnamDate(new Date())) {
+      setStep(2)
+      setInvalidField('PreferredDate')
+      setError('Ngày mong muốn không được trước ngày hiện tại.')
+      return
+    }
+
+    pending.current = true
+    setSubmitting(true)
+    setError('')
+    try {
+      await createRequest({
+        wasteType: form.WasteType,
+        quantityKg: Number(form.QuantityKg),
+        address: form.Address.trim(),
+        area: form.Area,
+        preferredDate: form.PreferredDate,
+        note: form.Note.trim(),
+      })
+      navigate('/dan', { replace: true, state: { requestCreated: true } })
+    } catch (error) {
+      if (error.status === 401) {
+        navigate('/login', { replace: true, state: { from: '/dan/tao-yeu-cau' } })
+        return
+      }
+      setError(error.message || 'Không thể gửi yêu cầu.')
+    } finally {
+      pending.current = false
+      setSubmitting(false)
+    }
   }
 
   const selectedWaste = wasteTypes.find(
@@ -173,7 +204,7 @@ function TaoYeuCau() {
             ))}
           </div>
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} noValidate>
             {step === 1 && (
               <div className="space-y-5">
                 <h2 className="text-xl font-semibold">
@@ -190,6 +221,8 @@ function TaoYeuCau() {
 
                   <select
                     id="wasteType"
+                    aria-invalid={invalidField === 'WasteType'}
+                    aria-describedby={invalidField === 'WasteType' ? 'request-error' : undefined}
                     value={form.WasteType}
                     onChange={e =>
                       updateField('WasteType', e.target.value)
@@ -215,8 +248,10 @@ function TaoYeuCau() {
 
                   <input
                     id="quantity"
+                    aria-invalid={invalidField === 'QuantityKg'}
+                    aria-describedby={invalidField === 'QuantityKg' ? 'request-error' : undefined}
                     type="number"
-                    min="0.01"
+                    min="0"
                     max="1000"
                     step="any"
                     value={form.QuantityKg}
@@ -243,6 +278,8 @@ function TaoYeuCau() {
 
                   <input
                     id="address"
+                    aria-invalid={invalidField === 'Address'}
+                    aria-describedby={invalidField === 'Address' ? 'request-error' : undefined}
                     type="text"
                     maxLength={200}
                     value={form.Address}
@@ -259,20 +296,17 @@ function TaoYeuCau() {
                     Khu vực
                   </label>
 
-                  <input
-                    id="area"
-                    type="text"
+                  <select id="area"
+                    aria-invalid={invalidField === 'Area'}
+                    aria-describedby={invalidField === 'Area' ? 'request-error' : undefined}
                     value={form.Area}
-                    onChange={e =>
-                      updateField('Area', e.target.value)
-                    }
-                    placeholder="Ví dụ: KHU_VUC_1"
-                    className={inputClass}
-                  />
-
-                  <p className="text-xs text-gray-500 mt-2">
-                    Khu vực cần trùng với mã khu vực được hệ thống quản lý.
-                  </p>
+                    onChange={event => updateField('Area', event.target.value)}
+                    className={inputClass}>
+                    <option value="">Chọn khu vực</option>
+                    {AREA_OPTIONS.map(area => (
+                      <option key={area.value} value={area.value}>{area.label}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -282,6 +316,8 @@ function TaoYeuCau() {
 
                   <input
                     id="date"
+                    aria-invalid={invalidField === 'PreferredDate'}
+                    aria-describedby={invalidField === 'PreferredDate' ? 'request-error' : undefined}
                     type="date"
                     min={localToday}
                     value={form.PreferredDate}
@@ -299,6 +335,8 @@ function TaoYeuCau() {
 
                   <textarea
                     id="note"
+                    aria-invalid={invalidField === 'Note'}
+                    aria-describedby={invalidField === 'Note' ? 'request-error' : undefined}
                     rows={4}
                     maxLength={500}
                     value={form.Note}
@@ -337,7 +375,7 @@ function TaoYeuCau() {
                     ['Loại rác', selectedWaste?.label],
                     ['Khối lượng', `${form.QuantityKg} kg`],
                     ['Địa chỉ', form.Address],
-                    ['Khu vực', form.Area],
+                    ['Khu vực', areaLabel(form.Area)],
                     ['Ngày mong muốn', form.PreferredDate],
                     ['Ghi chú', form.Note || 'Không có'],
                   ].map(([label, value]) => (
@@ -355,14 +393,12 @@ function TaoYeuCau() {
                   ))}
                 </dl>
 
-                <p className="text-sm text-amber-700">
-                  Chế độ thiết kế giao diện: chưa gửi dữ liệu lên hệ thống.
-                </p>
               </div>
             )}
 
             {error && (
               <div
+                id="request-error"
                 role="alert"
                 className="mt-5 bg-amber-50 text-amber-800 rounded-xl p-4 text-sm"
               >
@@ -375,6 +411,7 @@ function TaoYeuCau() {
                 <button
                   type="button"
                   onClick={previousStep}
+                  disabled={submitting}
                   className="inline-flex justify-center items-center gap-2 border border-gray-300 px-6 py-3 rounded-xl font-medium"
                 >
                   <ArrowLeft size={18} />
@@ -395,10 +432,11 @@ function TaoYeuCau() {
               ) : (
                 <button
                   type="submit"
+                  disabled={submitting}
                   className="inline-flex justify-center items-center gap-2 bg-[#167D61] text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#11634D]"
                 >
                   <Check size={19} />
-                  Xác nhận yêu cầu
+                  {submitting ? 'Đang gửi…' : 'Xác nhận yêu cầu'}
                 </button>
               )}
             </div>

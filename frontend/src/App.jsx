@@ -1,4 +1,4 @@
-
+﻿
 import {
   BrowserRouter,
   Routes,
@@ -10,6 +10,8 @@ import Login from './pages/Login'
 import Dan from './pages/Dan'
 import ThuGom from './pages/ThuGom'
 import Admin from './pages/Admin'
+import TaoYeuCau from './pages/TaoYeuCau'
+import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
   return (
@@ -17,9 +19,26 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/dan" element={<Dan />} />
-        <Route path="/thugom" element={<ThuGom />} />
-        <Route path="/admin" element={<Admin />} />
+        <Route path="/dan" element={
+          <ProtectedRoute allowedRoles={['DAN']}>
+            {user => <Dan user={user} />}
+          </ProtectedRoute>
+        } />
+        <Route path="/thugom" element={
+          <ProtectedRoute allowedRoles={['THUGOM']}>
+            {user => <ThuGom user={user} />}
+          </ProtectedRoute>
+        } />
+        <Route path="/admin" element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            {user => <Admin user={user} />}
+          </ProtectedRoute>
+        } />
+        <Route path="/dan/tao-yeu-cau" element={
+          <ProtectedRoute allowedRoles={['DAN']}>
+            {() => <TaoYeuCau />}
+          </ProtectedRoute>
+        } />
         <Route path="*" element={<Home />} />
       </Routes>
     </BrowserRouter>

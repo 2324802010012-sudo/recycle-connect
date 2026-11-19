@@ -1,10 +1,13 @@
-
+﻿
 import {
   randomBytes,
   pbkdf2Sync
 } from 'node:crypto'
 
 import {
+  closeSync,
+  openSync,
+  unlinkSync,
   writeFileSync
 } from 'node:fs'
 
@@ -12,7 +15,13 @@ import {
   spawnSync
 } from 'node:child_process'
 
-const DATABASE = 'recycle-connect-db'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { tmpdir } from 'node:os'
+import { AREA_OPTIONS } from '../../shared/request-options.mjs'
+
+const backend = fileURLToPath(new URL('../', import.meta.url))
+const cli = join(backend, 'node_modules', 'wrangler', 'bin', 'wrangler.js')
 
 const accounts = [
   {
@@ -25,7 +34,13 @@ const accounts = [
     username: 'TG01',
     fullName: 'Nhân viên thu gom 01',
     role: 'THUGOM',
-    serviceArea: 'KHU_VUC_1'
+    serviceArea: AREA_OPTIONS[0].value
+  },
+  {
+    username: 'TG02',
+    fullName: 'Nhân viên thu gom 02',
+    role: 'THUGOM',
+    serviceArea: AREA_OPTIONS[1].value
   },
   {
     username: 'AD01',
@@ -57,9 +72,9 @@ function sqlValue(value) {
 
 const password = process.env.DEMO_PASSWORD
 
-if (!password || password.length < 8) {
+if (!password || password.length < 8 || password.length > 128) {
   console.error(
-    'Vui lòng đặt DEMO_PASSWORD tối thiểu 8 ký tự.'
+    'Vui lòng đặt DEMO_PASSWORD từ 8 đến 128 ký tự.'
   )
   process.exit(1)
 }
@@ -94,27 +109,19 @@ ON CONFLICT(Username) DO UPDATE SET
 `
 }
 
-writeFileSync(
-  'seed-users.sql',
-  sql,
-  { encoding: 'utf8', mode: 0o600 }
-)
-
-const result = spawnSync(
-  'npx.cmd',
-  [
-    'wrangler',
-    'd1',
-    'execute',
-    DATABASE,
-    '--local',
-    '--file=./seed-users.sql'
-  ],
-  {
-    stdio: 'inherit',
-    shell: true
+const fixture = join(tmpdir(), 'recycle-users-' + randomBytes(16).toString('hex') + '.sql')
+const file = openSync(fixture, 'wx', 0o600)
+try {
+  try {
+    writeFileSync(file, sql, 'utf8')
+  } finally {
+    closeSync(file)
   }
-)
-
-process.exit(result.status ?? 1)
-
+  const result = spawnSync(process.execPath, [
+    cli, 'd1', 'execute', 'DB', '--local', '--file', fixture,
+  ], { cwd: backend, stdio: 'inherit', windowsHide: true })
+  if (result.error) throw result.error
+  process.exitCode = result.status ?? 1
+} finally {
+  unlinkSync(fixture)
+}
