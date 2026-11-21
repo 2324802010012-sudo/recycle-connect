@@ -41,6 +41,8 @@ Kiểm tra bổ sung: rollback cả CREATE/ACCEPT/COMPLETE khi cố ý gây lỗ
 
 Browser chạy desktop 1366×900 và mobile 390×844, không horizontal overflow; kiểm tra form giữ dữ liệu, chặn bấm gửi hai lần, thông báo thành công, ghi chú HTML chỉ là text, Escape/trả focus, offline, login và logout. Ảnh thật ở [screenshots](evidence/screenshots). Visibility test điều khiển `document.hidden` rồi phát `visibilitychange` để kiểm tra hook dừng/tiếp tục GET; chưa thay thế nghiệm thu thao tác chuyển tab vật lý trên hai thiết bị.
 
+Nhánh cookie HTTPS của Worker cũng đã kiểm tra bằng Miniflare `dispatchFetch` với URL `https://localhost/api/auth/login`: response 200, Set-Cookie có Secure và HttpOnly, xem [cookie-https.json](evidence/cookie-https.json). Đây là kiểm tra logic dựa vào URL request, không tạo TLS thật và không thay thế nghiệm thu cookie trên Cloudflare hosted.
+
 `API error: Error` xuất hiện ba lần trong integration là chủ động chèn lỗi log để thử rollback. Đây là lỗi dự kiến trong môi trường test, không chứa SQL/địa chỉ/secret. Những lượt FAIL phát hiện lỗi trong quá trình sửa đã được sửa và chạy lại; JSON chứa lượt chạy mới nhất, không gán PASS cho hosted tests chưa chạy.
 
 ## BLOCKED / nghiệm thu còn lại

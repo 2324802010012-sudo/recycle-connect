@@ -1,6 +1,6 @@
 # Chuẩn bị triển khai Cloudflare
 
-Trạng thái: **dry-run local PASS; remote BLOCKED chờ chủ dự án phê duyệt**. Chưa xác minh tài khoản Cloudflare đang đăng nhập, chưa ghi D1 remote, chưa deploy hoặc phát sinh dịch vụ trả phí. Không suy ra quyền sở hữu database chỉ từ ID trong repo.
+Trạng thái: **dry-run local PASS; remote BLOCKED chờ chủ dự án phê duyệt**. Kiểm tra read-only `wrangler whoami` ngày 21/11/2026 cho biết **chưa đăng nhập Cloudflare**. Chưa ghi D1 remote, chưa deploy hoặc phát sinh dịch vụ trả phí. Không suy ra quyền sở hữu database chỉ từ ID trong repo.
 
 ## Local
 

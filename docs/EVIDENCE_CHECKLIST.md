@@ -12,7 +12,7 @@ Ngày chạy local: 21/11/2026, chi tiết thời điểm/commit trong JSON. Ả
 | Rollback log lỗi | Có local | integration.json → Atomicity |
 | TN02/TN03 số đo thật | Có local sau chạy script | tn02.json, tn03.json; không coi là hosted benchmark |
 | Worker đã deploy/version | BLOCKED | Chờ phê duyệt deploy, chụp dashboard thực tế |
-| URL HTTPS, chứng chỉ/cookie Secure | BLOCKED | Chụp URL và thuộc tính cookie, che giá trị cookie |
+| URL HTTPS, chứng chỉ/cookie Secure | BLOCKED hosted; nhánh Worker Secure PASS local | cookie-https.json không kiểm tra TLS; cần chụp URL thật và thuộc tính cookie, che giá trị cookie |
 | D1 cloud và bốn bảng | BLOCKED | Chụp schema/tables, tránh dữ liệu riêng tư |
 | Chia sẻ dữ liệu hai thiết bị | BLOCKED | Ghi hai thiết bị, hai session, thời điểm |
 | Usage Free/CPU/request/rows | BLOCKED | Chụp dashboard và thời gian đo thực |

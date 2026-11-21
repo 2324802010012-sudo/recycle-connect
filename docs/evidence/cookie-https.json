@@ -1,0 +1,16 @@
+{
+  "measuredAt": "2026-11-21T01:11:43.965Z",
+  "businessDate": "2026-11-21",
+  "commit": "233f0f935903520c567191f77972a79bc6c8e473",
+  "workingTree": "modified",
+  "environment": "LOCAL workerd / Miniflare + isolated D1 SQLite; not Cloudflare production",
+  "node": "v24.21.0",
+  "platform": "win32 x64",
+  "device": "SUNTH",
+  "network": "loopback",
+  "status": "PASS",
+  "method": "Miniflare dispatchFetch with HTTPS request URL; checks Worker Set-Cookie branch only, not real TLS or hosted origin",
+  "httpStatus": 200,
+  "cookieSecure": true,
+  "cookieHttpOnly": true
+}

@@ -1,0 +1,1230 @@
+{
+  "measuredAt": "2026-11-21T01:09:12.137Z",
+  "businessDate": "2026-11-21",
+  "commit": "233f0f935903520c567191f77972a79bc6c8e473",
+  "workingTree": "modified",
+  "environment": "LOCAL workerd / Miniflare + isolated D1 SQLite; not Cloudflare production",
+  "node": "v24.21.0",
+  "platform": "win32 x64",
+  "device": "SUNTH",
+  "network": "loopback",
+  "method": "Node fetch, headers through fully consumed JSON, sequential 20 samples/endpoint; nearest-rank p95; no warmup excluded",
+  "results": [
+    {
+      "endpoint": "POST /api/requests",
+      "concurrency": 1,
+      "n": 20,
+      "meanMs": 7.215244999999959,
+      "p95Ms": 8.406599999999798,
+      "maxMs": 10.346799999999803,
+      "http": {
+        "201": 20
+      },
+      "error429or5xxRate": 0
+    },
+    {
+      "endpoint": "GET /api/requests/available",
+      "concurrency": 1,
+      "n": 20,
+      "meanMs": 5.708804999999984,
+      "p95Ms": 6.691699999999855,
+      "maxMs": 7.1370999999999185,
+      "http": {
+        "200": 20
+      },
+      "error429or5xxRate": 0
+    },
+    {
+      "endpoint": "POST /api/requests/:id/accept",
+      "concurrency": 1,
+      "n": 20,
+      "meanMs": 6.759020000000009,
+      "p95Ms": 7.99389999999994,
+      "maxMs": 17.73160000000007,
+      "http": {
+        "200": 20
+      },
+      "error429or5xxRate": 0
+    },
+    {
+      "endpoint": "GET /api/requests/assigned",
+      "concurrency": 1,
+      "n": 20,
+      "meanMs": 6.609845000000041,
+      "p95Ms": 7.932600000000093,
+      "maxMs": 7.9650000000001455,
+      "http": {
+        "200": 20
+      },
+      "error429or5xxRate": 0
+    },
+    {
+      "endpoint": "POST /api/requests/:id/complete",
+      "concurrency": 1,
+      "n": 20,
+      "meanMs": 7.519475000000034,
+      "p95Ms": 8.928699999999935,
+      "maxMs": 9.025000000000091,
+      "http": {
+        "200": 20
+      },
+      "error429or5xxRate": 0
+    },
+    {
+      "endpoint": "GET /api/auth/me",
+      "concurrency": 1,
+      "n": 20,
+      "meanMs": 4.01511000000005,
+      "p95Ms": 5.010999999999967,
+      "maxMs": 6.008100000000013,
+      "http": {
+        "200": 20
+      },
+      "error429or5xxRate": 0
+    },
+    {
+      "endpoint": "GET /api/requests/mine",
+      "concurrency": 1,
+      "n": 20,
+      "meanMs": 6.4188200000000055,
+      "p95Ms": 8.01780000000008,
+      "maxMs": 12.852800000000116,
+      "http": {
+        "200": 20
+      },
+      "error429or5xxRate": 0
+    },
+    {
+      "endpoint": "GET /api/requests/:id",
+      "concurrency": 1,
+      "n": 20,
+      "meanMs": 5.387810000000059,
+      "p95Ms": 6.5612999999998465,
+      "maxMs": 6.830199999999877,
+      "http": {
+        "200": 20
+      },
+      "error429or5xxRate": 0
+    },
+    {
+      "endpoint": "GET /api/admin/requests",
+      "concurrency": 1,
+      "n": 20,
+      "meanMs": 6.062350000000015,
+      "p95Ms": 6.862099999999828,
+      "maxMs": 10.238200000000234,
+      "http": {
+        "200": 20
+      },
+      "error429or5xxRate": 0
+    },
+    {
+      "endpoint": "GET /api/admin/stats",
+      "concurrency": 1,
+      "n": 20,
+      "meanMs": 5.679694999999924,
+      "p95Ms": 6.511399999999867,
+      "maxMs": 6.950799999999617,
+      "http": {
+        "200": 20
+      },
+      "error429or5xxRate": 0
+    },
+    {
+      "endpoint": "GET /api/requests/mine",
+      "concurrency": 4,
+      "n": 20,
+      "meanMs": 19.600785000000087,
+      "p95Ms": 24.508100000000013,
+      "maxMs": 24.759100000000217,
+      "http": {
+        "200": 20
+      },
+      "error429or5xxRate": 0
+    }
+  ],
+  "measurements": [
+    {
+      "endpoint": "POST /api/requests",
+      "ms": 10.346799999999803,
+      "status": 201
+    },
+    {
+      "endpoint": "POST /api/requests",
+      "ms": 8.393300000000181,
+      "status": 201
+    },
+    {
+      "endpoint": "POST /api/requests",
+      "ms": 7.098199999999906,
+      "status": 201
+    },
+    {
+      "endpoint": "POST /api/requests",
+      "ms": 6.63779999999997,
+      "status": 201
+    },
+    {
+      "endpoint": "POST /api/requests",
+      "ms": 7.474899999999707,
+      "status": 201
+    },
+    {
+      "endpoint": "POST /api/requests",
+      "ms": 8.406599999999798,
+      "status": 201
+    },
+    {
+      "endpoint": "POST /api/requests",
+      "ms": 7.4276999999997315,
+      "status": 201
+    },
+    {
+      "endpoint": "POST /api/requests",
+      "ms": 6.022599999999784,
+      "status": 201
+    },
+    {
+      "endpoint": "POST /api/requests",
+      "ms": 6.5108000000000175,
+      "status": 201
+    },
+    {
+      "endpoint": "POST /api/requests",
+      "ms": 6.2586999999998625,
+      "status": 201
+    },
+    {
+      "endpoint": "POST /api/requests",
+      "ms": 6.854800000000068,
+      "status": 201
+    },
+    {
+      "endpoint": "POST /api/requests",
+      "ms": 6.0383999999999105,
+      "status": 201
+    },
+    {
+      "endpoint": "POST /api/requests",
+      "ms": 8.108000000000175,
+      "status": 201
+    },
+    {
+      "endpoint": "POST /api/requests",
+      "ms": 6.201300000000174,
+      "status": 201
+    },
+    {
+      "endpoint": "POST /api/requests",
+      "ms": 7.30619999999999,
+      "status": 201
+    },
+    {
+      "endpoint": "POST /api/requests",
+      "ms": 7.746399999999994,
+      "status": 201
+    },
+    {
+      "endpoint": "POST /api/requests",
+      "ms": 6.191200000000208,
+      "status": 201
+    },
+    {
+      "endpoint": "POST /api/requests",
+      "ms": 6.840400000000045,
+      "status": 201
+    },
+    {
+      "endpoint": "POST /api/requests",
+      "ms": 6.932099999999991,
+      "status": 201
+    },
+    {
+      "endpoint": "POST /api/requests",
+      "ms": 7.5086999999998625,
+      "status": 201
+    },
+    {
+      "endpoint": "GET /api/requests/available",
+      "ms": 6.655799999999999,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/available",
+      "ms": 5.718299999999999,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/available",
+      "ms": 5.185799999999745,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/available",
+      "ms": 5.360199999999622,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/available",
+      "ms": 6.022300000000087,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/available",
+      "ms": 5.218699999999899,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/available",
+      "ms": 4.74310000000014,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/available",
+      "ms": 5.98720000000003,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/available",
+      "ms": 5.07739999999967,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/available",
+      "ms": 5.355000000000018,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/available",
+      "ms": 5.493399999999838,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/available",
+      "ms": 6.691699999999855,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/available",
+      "ms": 5.479200000000219,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/available",
+      "ms": 6.390400000000227,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/available",
+      "ms": 5.969000000000051,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/available",
+      "ms": 4.94419999999991,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/available",
+      "ms": 6.077200000000175,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/available",
+      "ms": 7.1370999999999185,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/available",
+      "ms": 5.684700000000248,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/available",
+      "ms": 4.985400000000027,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/accept",
+      "ms": 6.256399999999758,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/accept",
+      "ms": 5.4591999999997824,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/accept",
+      "ms": 6.995000000000346,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/accept",
+      "ms": 7.0067000000003645,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/accept",
+      "ms": 5.689200000000255,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/accept",
+      "ms": 6.021500000000287,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/accept",
+      "ms": 5.95699999999988,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/accept",
+      "ms": 6.505999999999858,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/accept",
+      "ms": 5.686700000000201,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/accept",
+      "ms": 5.8335000000001855,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/accept",
+      "ms": 5.147100000000137,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/accept",
+      "ms": 6.027000000000044,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/accept",
+      "ms": 5.879899999999907,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/accept",
+      "ms": 6.415899999999965,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/accept",
+      "ms": 17.73160000000007,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/accept",
+      "ms": 7.99389999999994,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/accept",
+      "ms": 6.845699999999852,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/accept",
+      "ms": 5.690099999999802,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/accept",
+      "ms": 6.819999999999709,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/accept",
+      "ms": 5.217999999999847,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/assigned",
+      "ms": 5.3904999999999745,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/assigned",
+      "ms": 4.946400000000267,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/assigned",
+      "ms": 6.858499999999822,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/assigned",
+      "ms": 6.80619999999999,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/assigned",
+      "ms": 6.697799999999916,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/assigned",
+      "ms": 5.9310999999997875,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/assigned",
+      "ms": 5.7413000000001375,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/assigned",
+      "ms": 6.861100000000079,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/assigned",
+      "ms": 6.503400000000056,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/assigned",
+      "ms": 6.399400000000242,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/assigned",
+      "ms": 6.253600000000006,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/assigned",
+      "ms": 7.9650000000001455,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/assigned",
+      "ms": 7.932600000000093,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/assigned",
+      "ms": 6.482500000000073,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/assigned",
+      "ms": 7.061199999999644,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/assigned",
+      "ms": 6.37900000000036,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/assigned",
+      "ms": 7.687800000000152,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/assigned",
+      "ms": 6.742999999999938,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/assigned",
+      "ms": 6.72609999999986,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/assigned",
+      "ms": 6.830400000000282,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/complete",
+      "ms": 9.025000000000091,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/complete",
+      "ms": 7.529100000000199,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/complete",
+      "ms": 8.928699999999935,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/complete",
+      "ms": 7.7435999999997875,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/complete",
+      "ms": 6.755799999999908,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/complete",
+      "ms": 7.324200000000019,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/complete",
+      "ms": 8.696399999999812,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/complete",
+      "ms": 7.024899999999889,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/complete",
+      "ms": 7.833799999999883,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/complete",
+      "ms": 6.461999999999989,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/complete",
+      "ms": 7.975699999999961,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/complete",
+      "ms": 6.706800000000385,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/complete",
+      "ms": 6.257000000000062,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/complete",
+      "ms": 6.943500000000313,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/complete",
+      "ms": 7.4848000000001775,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/complete",
+      "ms": 7.806300000000192,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/complete",
+      "ms": 7.801500000000033,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/complete",
+      "ms": 7.3926000000001295,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/complete",
+      "ms": 6.979399999999714,
+      "status": 200
+    },
+    {
+      "endpoint": "POST /api/requests/:id/complete",
+      "ms": 7.7184000000002015,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/auth/me",
+      "ms": 5.010999999999967,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/mine",
+      "ms": 7.155499999999847,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/:id",
+      "ms": 6.830199999999877,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/requests",
+      "ms": 10.238200000000234,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/stats",
+      "ms": 6.366399999999885,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/auth/me",
+      "ms": 4.460199999999986,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/mine",
+      "ms": 6.213300000000345,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/:id",
+      "ms": 4.887300000000323,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/requests",
+      "ms": 6.862099999999828,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/stats",
+      "ms": 6.464499999999589,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/auth/me",
+      "ms": 4.492900000000191,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/mine",
+      "ms": 5.389400000000023,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/:id",
+      "ms": 4.806500000000142,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/requests",
+      "ms": 5.547299999999723,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/stats",
+      "ms": 5.571800000000167,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/auth/me",
+      "ms": 4.37689999999975,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/mine",
+      "ms": 5.986399999999776,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/:id",
+      "ms": 6.5612999999998465,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/requests",
+      "ms": 6.040199999999913,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/stats",
+      "ms": 5.49980000000005,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/auth/me",
+      "ms": 4.326600000000326,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/mine",
+      "ms": 5.785399999999754,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/:id",
+      "ms": 5.078000000000429,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/requests",
+      "ms": 5.791899999999714,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/stats",
+      "ms": 5.911099999999806,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/auth/me",
+      "ms": 3.6075000000000728,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/mine",
+      "ms": 5.6247999999995955,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/:id",
+      "ms": 4.797499999999673,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/requests",
+      "ms": 5.399199999999837,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/stats",
+      "ms": 5.578899999999976,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/auth/me",
+      "ms": 3.137499999999818,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/mine",
+      "ms": 5.143500000000131,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/:id",
+      "ms": 4.460000000000036,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/requests",
+      "ms": 6.178899999999885,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/stats",
+      "ms": 4.9845000000000255,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/auth/me",
+      "ms": 3.8187000000002627,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/mine",
+      "ms": 6.032999999999902,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/:id",
+      "ms": 5.6884000000000015,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/requests",
+      "ms": 5.191400000000158,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/stats",
+      "ms": 4.761699999999564,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/auth/me",
+      "ms": 2.897100000000137,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/mine",
+      "ms": 5.938000000000102,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/:id",
+      "ms": 4.806100000000242,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/requests",
+      "ms": 5.908999999999651,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/stats",
+      "ms": 5.5034999999998035,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/auth/me",
+      "ms": 3.992000000000189,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/mine",
+      "ms": 8.01780000000008,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/:id",
+      "ms": 5.025699999999688,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/requests",
+      "ms": 5.377599999999802,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/stats",
+      "ms": 6.511399999999867,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/auth/me",
+      "ms": 3.4032999999999447,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/mine",
+      "ms": 4.937900000000354,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/:id",
+      "ms": 5.495199999999841,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/requests",
+      "ms": 6.183100000000195,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/stats",
+      "ms": 5.268199999999979,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/auth/me",
+      "ms": 3.5670000000000073,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/mine",
+      "ms": 5.614799999999832,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/:id",
+      "ms": 4.620000000000346,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/requests",
+      "ms": 4.901400000000194,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/stats",
+      "ms": 4.739900000000034,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/auth/me",
+      "ms": 3.4130999999997584,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/mine",
+      "ms": 6.154100000000199,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/:id",
+      "ms": 4.4838000000004286,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/requests",
+      "ms": 6.168500000000222,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/stats",
+      "ms": 5.543500000000222,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/auth/me",
+      "ms": 3.701999999999771,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/mine",
+      "ms": 6.68769999999995,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/:id",
+      "ms": 6.118800000000192,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/requests",
+      "ms": 5.99389999999994,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/stats",
+      "ms": 5.103700000000117,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/auth/me",
+      "ms": 3.7019000000000233,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/mine",
+      "ms": 5.751000000000204,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/:id",
+      "ms": 6.54930000000013,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/requests",
+      "ms": 6.3025000000002365,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/stats",
+      "ms": 5.844200000000001,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/auth/me",
+      "ms": 6.008100000000013,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/mine",
+      "ms": 6.988800000000083,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/:id",
+      "ms": 6.004799999999705,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/requests",
+      "ms": 6.271799999999985,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/stats",
+      "ms": 6.3840000000000146,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/auth/me",
+      "ms": 3.9012000000002445,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/mine",
+      "ms": 5.863799999999628,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/:id",
+      "ms": 5.30639999999994,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/requests",
+      "ms": 6.008000000000266,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/stats",
+      "ms": 5.694300000000112,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/auth/me",
+      "ms": 4.324000000000069,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/mine",
+      "ms": 12.852800000000116,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/:id",
+      "ms": 5.758700000000317,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/requests",
+      "ms": 5.940200000000004,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/stats",
+      "ms": 5.923499999999876,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/auth/me",
+      "ms": 3.54320000000007,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/mine",
+      "ms": 5.876400000000103,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/:id",
+      "ms": 4.882099999999809,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/requests",
+      "ms": 5.440300000000207,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/stats",
+      "ms": 6.950799999999617,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/auth/me",
+      "ms": 4.618000000000393,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/mine",
+      "ms": 6.36200000000008,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/requests/:id",
+      "ms": 5.596100000000206,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/requests",
+      "ms": 5.501500000000306,
+      "status": 200
+    },
+    {
+      "endpoint": "GET /api/admin/stats",
+      "ms": 4.988199999999779,
+      "status": 200
+    }
+  ],
+  "concurrent": [
+    {
+      "ms": 9.237900000000081,
+      "status": 200
+    },
+    {
+      "ms": 24.759100000000217,
+      "status": 200
+    },
+    {
+      "ms": 24.508100000000013,
+      "status": 200
+    },
+    {
+      "ms": 24.4079999999999,
+      "status": 200
+    },
+    {
+      "ms": 15.765200000000277,
+      "status": 200
+    },
+    {
+      "ms": 20.775800000000345,
+      "status": 200
+    },
+    {
+      "ms": 20.753799999999956,
+      "status": 200
+    },
+    {
+      "ms": 20.83929999999964,
+      "status": 200
+    },
+    {
+      "ms": 11.162499999999909,
+      "status": 200
+    },
+    {
+      "ms": 19.241300000000138,
+      "status": 200
+    },
+    {
+      "ms": 19.643600000000333,
+      "status": 200
+    },
+    {
+      "ms": 19.313300000000254,
+      "status": 200
+    },
+    {
+      "ms": 15.53590000000031,
+      "status": 200
+    },
+    {
+      "ms": 21.491700000000037,
+      "status": 200
+    },
+    {
+      "ms": 21.536200000000008,
+      "status": 200
+    },
+    {
+      "ms": 21.741399999999885,
+      "status": 200
+    },
+    {
+      "ms": 19.846300000000156,
+      "status": 200
+    },
+    {
+      "ms": 20.35609999999997,
+      "status": 200
+    },
+    {
+      "ms": 20.508800000000065,
+      "status": 200
+    },
+    {
+      "ms": 20.59140000000025,
+      "status": 200
+    }
+  ]
+}

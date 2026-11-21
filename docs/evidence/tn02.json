@@ -1,0 +1,222 @@
+{
+  "measuredAt": "2026-11-21T01:12:29.820Z",
+  "businessDate": "2026-11-21",
+  "commit": "233f0f935903520c567191f77972a79bc6c8e473",
+  "workingTree": "modified",
+  "environment": "LOCAL workerd / Miniflare + isolated D1 SQLite; not Cloudflare production",
+  "node": "v24.21.0",
+  "platform": "win32 x64",
+  "device": "SUNTH",
+  "network": "loopback",
+  "browser": "158.0.4370.33",
+  "method": "Two independent browser cookie contexts. Real timers. MutationObserver records rendered citizen card; POST completion timestamp in collector browser. Random phase offsets. At least 60s GET observation per interval. Alternate builds in temporary directories; default frontend/dist untouched.",
+  "results": [
+    {
+      "intervalMs": 2000,
+      "samples": [
+        {
+          "requestId": 1,
+          "offsetMs": 168,
+          "status": 200,
+          "acknowledgedAt": 1795223360868,
+          "visibleAt": 1795223361570,
+          "delayMs": 702
+        },
+        {
+          "requestId": 2,
+          "offsetMs": 1350,
+          "status": 200,
+          "acknowledgedAt": 1795223362967,
+          "visibleAt": 1795223363581,
+          "delayMs": 614
+        },
+        {
+          "requestId": 3,
+          "offsetMs": 243,
+          "status": 200,
+          "acknowledgedAt": 1795223363867,
+          "visibleAt": 1795223365593,
+          "delayMs": 1726
+        },
+        {
+          "requestId": 4,
+          "offsetMs": 1256,
+          "status": 200,
+          "acknowledgedAt": 1795223366904,
+          "visibleAt": 1795223367602,
+          "delayMs": 698
+        },
+        {
+          "requestId": 5,
+          "offsetMs": 47,
+          "status": 200,
+          "acknowledgedAt": 1795223367705,
+          "visibleAt": 1795223369619,
+          "delayMs": 1914
+        }
+      ],
+      "meanDelayMs": 1130.8,
+      "maxDelayMs": 1914,
+      "observationMs": 60002,
+      "getCount": 30,
+      "getsPerMinute": 29.999000033332223,
+      "endpoint": "GET /api/requests/mine",
+      "getStartedAt": [
+        1795223361557,
+        1795223363569,
+        1795223365581,
+        1795223367592,
+        1795223369605,
+        1795223371630,
+        1795223373657,
+        1795223375669,
+        1795223377685,
+        1795223379699,
+        1795223381713,
+        1795223383725,
+        1795223385747,
+        1795223387760,
+        1795223389777,
+        1795223391801,
+        1795223393816,
+        1795223395833,
+        1795223397843,
+        1795223399857,
+        1795223401898,
+        1795223403900,
+        1795223405913,
+        1795223407926,
+        1795223409942,
+        1795223411963,
+        1795223413988,
+        1795223416009,
+        1795223418029,
+        1795223420045
+      ]
+    },
+    {
+      "intervalMs": 5000,
+      "samples": [
+        {
+          "requestId": 1,
+          "offsetMs": 3725,
+          "status": 200,
+          "acknowledgedAt": 1795223428708,
+          "visibleAt": 1795223429560,
+          "delayMs": 852
+        },
+        {
+          "requestId": 2,
+          "offsetMs": 276,
+          "status": 200,
+          "acknowledgedAt": 1795223429881,
+          "visibleAt": 1795223434567,
+          "delayMs": 4686
+        },
+        {
+          "requestId": 3,
+          "offsetMs": 2301,
+          "status": 200,
+          "acknowledgedAt": 1795223436917,
+          "visibleAt": 1795223439578,
+          "delayMs": 2661
+        },
+        {
+          "requestId": 4,
+          "offsetMs": 1775,
+          "status": 200,
+          "acknowledgedAt": 1795223441401,
+          "visibleAt": 1795223444586,
+          "delayMs": 3185
+        },
+        {
+          "requestId": 5,
+          "offsetMs": 970,
+          "status": 200,
+          "acknowledgedAt": 1795223445597,
+          "visibleAt": 1795223449597,
+          "delayMs": 4000
+        }
+      ],
+      "meanDelayMs": 3076.8,
+      "maxDelayMs": 4686,
+      "observationMs": 60009,
+      "getCount": 12,
+      "getsPerMinute": 11.998200269959506,
+      "endpoint": "GET /api/requests/mine",
+      "getStartedAt": [
+        1795223429548,
+        1795223434556,
+        1795223439566,
+        1795223444577,
+        1795223449585,
+        1795223454609,
+        1795223459627,
+        1795223464650,
+        1795223469662,
+        1795223474681,
+        1795223479702,
+        1795223484729
+      ]
+    },
+    {
+      "intervalMs": 10000,
+      "samples": [
+        {
+          "requestId": 1,
+          "offsetMs": 2360,
+          "status": 200,
+          "acknowledgedAt": 1795223492047,
+          "visibleAt": 1795223499288,
+          "delayMs": 7241
+        },
+        {
+          "requestId": 2,
+          "offsetMs": 1542,
+          "status": 200,
+          "acknowledgedAt": 1795223500887,
+          "visibleAt": 1795223509301,
+          "delayMs": 8414
+        },
+        {
+          "requestId": 3,
+          "offsetMs": 7529,
+          "status": 200,
+          "acknowledgedAt": 1795223516884,
+          "visibleAt": 1795223519312,
+          "delayMs": 2428
+        },
+        {
+          "requestId": 4,
+          "offsetMs": 2907,
+          "status": 200,
+          "acknowledgedAt": 1795223522257,
+          "visibleAt": 1795223529327,
+          "delayMs": 7070
+        },
+        {
+          "requestId": 5,
+          "offsetMs": 3901,
+          "status": 200,
+          "acknowledgedAt": 1795223533269,
+          "visibleAt": 1795223539339,
+          "delayMs": 6070
+        }
+      ],
+      "meanDelayMs": 6244.6,
+      "maxDelayMs": 8414,
+      "observationMs": 60000,
+      "getCount": 6,
+      "getsPerMinute": 6,
+      "endpoint": "GET /api/requests/mine",
+      "getStartedAt": [
+        1795223499277,
+        1795223509289,
+        1795223519302,
+        1795223529315,
+        1795223539327,
+        1795223549347
+      ]
+    }
+  ]
+}

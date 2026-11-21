@@ -21,7 +21,7 @@ Nhánh `audit/baseline-v1.4`; chưa merge/push main. Không có bản Baseline/r
 
 Giới hạn: chưa có idempotency key ở API create. Ref/disabled ngăn thao tác nhấp lặp trong cùng form; nếu mất phản hồi POST, UI cảnh báo kiểm tra danh sách trước gửi lại, không tự retry. Không hứa exactly-once khi client tự gửi nhiều HTTP POST độc lập. F11 conditional UPDATE bảo đảm duy nhất người nhận trong các cuộc tranh nhận đã thử.
 
-P0 còn lại cho nghiệm thu cloud: tài khoản/database và quyền deploy; đăng nhập hosted, cookie Secure/HTTPS, dữ liệu hai thiết bị, Usage/CPU và TC/TN remote được duyệt. P1 còn lại: đối chiếu F12 với Baseline gốc, đánh giá query/index với dữ liệu lớn nếu phạm vi cho phép. Không bổ sung AI/GPS/map/chat/thanh toán/hủy/sửa/xóa đơn.
+P0 còn lại cho nghiệm thu cloud: CLI hiện chưa đăng nhập Cloudflare (`whoami` read-only); cần tài khoản/database và quyền deploy, sau đó xác minh đăng nhập hosted, cookie Secure/HTTPS, dữ liệu hai thiết bị, Usage/CPU và TC/TN remote được duyệt. P1 còn lại: đối chiếu F12 với Baseline gốc, đánh giá query/index với dữ liệu lớn nếu phạm vi cho phép. Không bổ sung AI/GPS/map/chat/thanh toán/hủy/sửa/xóa đơn.
 
 ## Câu hỏi bảo vệ và bằng chứng
 

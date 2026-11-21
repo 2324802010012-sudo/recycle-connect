@@ -1,0 +1,200 @@
+{
+  "measuredAt": "2026-11-21T01:08:20.402Z",
+  "businessDate": "2026-11-21",
+  "commit": "233f0f935903520c567191f77972a79bc6c8e473",
+  "workingTree": "modified",
+  "environment": "LOCAL workerd / Miniflare + isolated D1 SQLite; not Cloudflare production",
+  "node": "v24.21.0",
+  "platform": "win32 x64",
+  "device": "SUNTH",
+  "network": "loopback",
+  "results": [
+    {
+      "name": "TC01: login DAN, two THUGOM, ADMIN; seed Node hash verified in Worker",
+      "status": "PASS"
+    },
+    {
+      "name": "TC02: wrong password, unknown user, invalid JSON/types, Origin",
+      "status": "PASS"
+    },
+    {
+      "name": "TC03: create, immutable server ownership/status, atomic CREATE",
+      "status": "PASS"
+    },
+    {
+      "name": "TC04: invalid payloads leave Requests and RequestLogs unchanged",
+      "status": "PASS"
+    },
+    {
+      "name": "TC05: second citizen cannot read another citizen request",
+      "status": "PASS"
+    },
+    {
+      "name": "TC06/TC07/TN01: 10 real simultaneous HTTP accept races, D1 invariant",
+      "status": "PASS"
+    },
+    {
+      "name": "TC08: other collector forbidden to complete and hidden from detail",
+      "status": "PASS"
+    },
+    {
+      "name": "TC09: owner completes once; repeat operations conflict",
+      "status": "PASS"
+    },
+    {
+      "name": "TC10/TC19: real ordered timeline, action, actor and timestamp",
+      "status": "PASS"
+    },
+    {
+      "name": "TC12: stats and 14-day series match independent SQL",
+      "status": "PASS"
+    },
+    {
+      "name": "TC13 implementation only: optional priority scores, stable ties, pagination",
+      "status": "PASS"
+    },
+    {
+      "name": "TC16: session restored; expired and malformed sessions rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "TC17: pending privacy, authorized full detail, 404 non-existent IDs",
+      "status": "PASS"
+    },
+    {
+      "name": "TC18: all endpoint role restrictions via direct HTTP",
+      "status": "PASS"
+    },
+    {
+      "name": "TC20: filters, pagination bounds, invalid dates, SQL input",
+      "status": "PASS"
+    },
+    {
+      "name": "Atomicity: CREATE/ACCEPT/COMPLETE log failures roll back state",
+      "status": "PASS"
+    },
+    {
+      "name": "Concurrent CREATE: each log references the correct new row/actor",
+      "status": "PASS"
+    },
+    {
+      "name": "Migration: fixed four business tables, guards reject invalid SQL without data loss",
+      "status": "PASS"
+    },
+    {
+      "name": "TC15: logout revokes D1 token, replay and repeated logout rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "Login rate limit: HTTP 429 before password hashing",
+      "status": "PASS"
+    }
+  ],
+  "tn01": {
+    "trials": 10,
+    "races": [
+      {
+        "requestId": 2,
+        "http": [
+          200,
+          409
+        ],
+        "collectorId": 3,
+        "acceptedAt": "2026-11-21T01:08:15.997Z",
+        "acceptLogs": 1
+      },
+      {
+        "requestId": 3,
+        "http": [
+          200,
+          409
+        ],
+        "collectorId": 3,
+        "acceptedAt": "2026-11-21T01:08:16.057Z",
+        "acceptLogs": 1
+      },
+      {
+        "requestId": 4,
+        "http": [
+          200,
+          409
+        ],
+        "collectorId": 3,
+        "acceptedAt": "2026-11-21T01:08:16.144Z",
+        "acceptLogs": 1
+      },
+      {
+        "requestId": 5,
+        "http": [
+          200,
+          409
+        ],
+        "collectorId": 3,
+        "acceptedAt": "2026-11-21T01:08:16.204Z",
+        "acceptLogs": 1
+      },
+      {
+        "requestId": 6,
+        "http": [
+          200,
+          409
+        ],
+        "collectorId": 3,
+        "acceptedAt": "2026-11-21T01:08:16.260Z",
+        "acceptLogs": 1
+      },
+      {
+        "requestId": 7,
+        "http": [
+          200,
+          409
+        ],
+        "collectorId": 3,
+        "acceptedAt": "2026-11-21T01:08:16.319Z",
+        "acceptLogs": 1
+      },
+      {
+        "requestId": 8,
+        "http": [
+          200,
+          409
+        ],
+        "collectorId": 3,
+        "acceptedAt": "2026-11-21T01:08:16.383Z",
+        "acceptLogs": 1
+      },
+      {
+        "requestId": 9,
+        "http": [
+          200,
+          409
+        ],
+        "collectorId": 3,
+        "acceptedAt": "2026-11-21T01:08:16.441Z",
+        "acceptLogs": 1
+      },
+      {
+        "requestId": 10,
+        "http": [
+          200,
+          409
+        ],
+        "collectorId": 3,
+        "acceptedAt": "2026-11-21T01:08:16.501Z",
+        "acceptLogs": 1
+      },
+      {
+        "requestId": 11,
+        "http": [
+          200,
+          409
+        ],
+        "collectorId": 3,
+        "acceptedAt": "2026-11-21T01:08:16.561Z",
+        "acceptLogs": 1
+      }
+    ],
+    "successes": 10,
+    "conflicts": 10
+  }
+}

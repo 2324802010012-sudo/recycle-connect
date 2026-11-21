@@ -1,0 +1,71 @@
+{
+  "measuredAt": "2026-11-21T01:08:51.610Z",
+  "businessDate": "2026-11-21",
+  "commit": "233f0f935903520c567191f77972a79bc6c8e473",
+  "workingTree": "modified",
+  "environment": "LOCAL workerd / Miniflare + isolated D1 SQLite; not Cloudflare production",
+  "node": "v24.21.0",
+  "platform": "win32 x64",
+  "device": "SUNTH",
+  "network": "loopback",
+  "browser": "158.0.4370.33",
+  "viewports": [
+    "1366x900",
+    "390x844"
+  ],
+  "results": [
+    {
+      "name": "M01/M02/M04/M05 desktop: real browser login for all roles",
+      "status": "PASS"
+    },
+    {
+      "name": "M03: validation, back navigation, retained form, double-submit protection",
+      "status": "PASS"
+    },
+    {
+      "name": "TC11: independent sessions observe CREATE and ACCEPT through 5s polling",
+      "status": "PASS"
+    },
+    {
+      "name": "TC14/409: stale second collector receives conflict and refreshes",
+      "status": "PASS"
+    },
+    {
+      "name": "M06: full timeline, escaped note, Escape and restored focus",
+      "status": "PASS"
+    },
+    {
+      "name": "TC14: offline keeps data, shows last update, retry recovers",
+      "status": "PASS"
+    },
+    {
+      "name": "TC16/18: refresh restores session; wrong route denied",
+      "status": "PASS"
+    },
+    {
+      "name": "F10: controlled visibilitychange stops and resumes polling",
+      "status": "PASS"
+    },
+    {
+      "name": "TC20/M05: pagination, real charts, status filter on desktop",
+      "status": "PASS"
+    },
+    {
+      "name": "M01–M06 mobile 390x844: no horizontal overflow, form and detail",
+      "status": "PASS"
+    },
+    {
+      "name": "TC15/UI: expired-session logout exits; logout stops polling",
+      "status": "PASS"
+    },
+    {
+      "name": "F10/401: revoked session polling redirects to login",
+      "status": "PASS"
+    },
+    {
+      "name": "Browser JavaScript: no uncaught application errors",
+      "status": "PASS"
+    }
+  ],
+  "uncaughtErrors": []
+}
