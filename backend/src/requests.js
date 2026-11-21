@@ -110,7 +110,7 @@ async function listRequests(db, user, params, path) {
   const { page, limit } = pagination(params)
   const mine = path.endsWith('/mine')
   const myStatus = mine ? filterValue(params, 'status', REQUEST_STATUSES) : null
-  const prioritize = path.endsWith('/available') && params.get('priority') === '1'
+  const prioritize = path.endsWith('/available') && filterValue(params, 'priority', ['0', '1']) === '1'
   const filters = []
   const values = []
   function add(filter, value) {
@@ -232,10 +232,10 @@ async function transition(db, user, id, action) {
       .bind(id, user.UserId, accepting ? 'ACCEPT' : 'COMPLETE', timestamp),
   ])
 
-  if (result.results.length === 1) return success(result.results[0])
+  if (result.meta.changes === 1 && result.results.length === 1) return success(result.results[0])
+  const row = await db.prepare('SELECT CollectorId FROM Requests WHERE RequestId = ?').bind(id).first()
+  if (!row) throw unavailable()
   if (!accepting) {
-    const row = await db.prepare('SELECT CollectorId FROM Requests WHERE RequestId = ?').bind(id).first()
-    if (!row) throw unavailable()
     if (row.CollectorId !== null && row.CollectorId !== user.UserId) throw forbidden()
   }
   throw conflict()

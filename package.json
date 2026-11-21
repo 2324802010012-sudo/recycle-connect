@@ -1,4 +1,12 @@
 {
+  "name": "recycle-connect",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix frontend run build",
+    "lint": "npm --prefix frontend run lint",
+    "test": "npm --prefix backend test",
+    "test:browser": "npm --prefix backend run test:browser"
+  },
   "devDependencies": {
     "wrangler": "^4.165.0"
   }

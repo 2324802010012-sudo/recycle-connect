@@ -9,11 +9,11 @@ async function parseResponse(response) {
   const data = await response.json().catch(() => null)
 
   if (!response.ok) {
-    throw new Error(
+    throw Object.assign(new Error(
       data?.error?.message ||
       data?.message ||
       'Không thể xử lý yêu cầu.'
-    )
+    ), { status: response.status })
   }
 
   return data
@@ -57,6 +57,7 @@ export async function logout() {
     signal: AbortSignal.timeout(15000),
   })
 
+  if (response.status === 401) return true
   if (!response.ok) {
     return parseResponse(response)
   }

@@ -1,103 +1,83 @@
-﻿# Recycle Connect
+# Recycle Connect
 
-Recycle Connect giúp người dân đặt lịch thu gom rác tái chế, người thu gom xử lý yêu cầu và quản trị viên theo dõi tiến độ. Giao diện dùng React, Vite, Tailwind CSS và font Inter. Cloudflare Worker phục vụ frontend và REST API trên cùng origin. Cloudflare D1 là cơ sở dữ liệu dựa trên SQLite.
+Website tiếp nhận và điều phối bán tự động yêu cầu thu gom rác tái chế. Người dân tạo đơn, người thu gom tự chọn và nhận, quản trị viên theo dõi dữ liệu. React + Vite + Tailwind; Cloudflare Worker phục vụ Static Assets và 12 REST API cùng origin; D1 lưu bốn bảng nghiệp vụ.
 
-## Chạy cục bộ
+Vòng đời: **CHO_NHAN → DA_NHAN → HOAN_THANH**. Không tự động phân công, không sửa/hủy/xóa đơn. Danh mục dùng chung: `KHU_VUC_1` = Thuận An, `KHU_VUC_2` = Thủ Dầu Một.
 
-Các lệnh bên dưới dùng PowerShell trên Windows. Dự án đã chạy với Node.js 26.13.1 và npm.
+## Trạng thái
 
-**1. Cài thư viện và build giao diện**
+Đối chiếu Baseline v1.4 theo prompt; chưa có Baseline/rubric gốc. F01–F11 đã kiểm tra local bằng HTTP + D1 và Edge desktop/mobile. F12 có sẵn, mặc định tắt, chưa xác nhận đầy đủ công thức với Baseline gốc. Production chưa deploy/chưa nghiệm thu. Xem [trạng thái](docs/IMPLEMENTATION_STATUS.md), [audit](docs/AUDIT.md) và [test report](docs/TEST_REPORT.md).
 
-Chạy tại thư mục gốc của repo.
+## Chạy local (PowerShell)
+
+Đã xác minh trên Windows, Node.js **24.21.0**, npm 11.19.0, Wrangler 4.165.0:
 
 ```powershell
 npm --prefix frontend ci
 npm --prefix backend ci
 npm --prefix frontend run build
-```
-
-**2. Khởi tạo D1 cục bộ và tạo tài khoản demo**
-
-```powershell
 Set-Location backend
 npx wrangler d1 execute DB --local --file=schema.sql
-$env:DEMO_PASSWORD = Read-Host 'Nhập mật khẩu demo từ 8 đến 128 ký tự'
-node scripts/seed-users.mjs
-Remove-Item Env:DEMO_PASSWORD
-```
-
-| Tài khoản | Vai trò |
-| --- | --- |
-| `D01` | Người dân |
-| `TG01` | Người thu gom khu vực Thuận An |
-| `TG02` | Người thu gom khu vực Thủ Dầu Một |
-| `AD01` | Quản trị viên |
-
-Mật khẩu ban đầu của các tài khoản là giá trị vừa nhập. Chạy lại seed sẽ cập nhật mật khẩu của các tài khoản được chọn. Để cập nhật riêng `TG02`, đặt lại `DEMO_PASSWORD` rồi chạy `node scripts/seed-users.mjs TG02`.
-
-Dữ liệu chạy cục bộ được Wrangler lưu trong `backend/.wrangler/`. Thư mục này được Git bỏ qua. Sau khi clone, mỗi người cần khởi tạo D1 và seed tài khoản trên máy của mình. Danh sách yêu cầu ban đầu trống. Tên khu vực đi cùng mã nguồn trong [danh mục dùng chung](shared/request-options.mjs). Mã `KHU_VUC_1` hiển thị là **Thuận An**, mã `KHU_VUC_2` hiển thị là **Thủ Dầu Một**.
-
-**3. Khởi động và đăng nhập**
-
-Tiếp tục trong thư mục `backend`.
-
-```powershell
+npx wrangler d1 migrations apply DB --local
+$demoSecret = Read-Host 'Mật khẩu demo 8–128 ký tự' -AsSecureString
+$env:DEMO_PASSWORD = [System.Net.NetworkCredential]::new('', $demoSecret).Password
+try { node scripts/seed-users.mjs } finally {
+  Remove-Item Env:DEMO_PASSWORD
+  $demoSecret.Dispose()
+}
 npx wrangler dev --local --port 8787
 ```
 
-Mở [http://localhost:8787](http://localhost:8787) để đăng nhập. Endpoint `/api/health` dùng để kiểm tra kết nối Worker với D1. Khi sửa giao diện, giữ Worker đang chạy và dùng một cửa sổ PowerShell khác tại thư mục gốc để chạy `npm --prefix frontend run dev`. Mở địa chỉ Vite in ra, thường là `http://localhost:5173`. Vite chuyển tiếp các yêu cầu `/api` đến Worker ở cổng 8787.
+Mở **http://localhost:8787**. Dữ liệu local ở `backend/.wrangler/`, không có trong Git. `/api/health` kiểm tra Worker/D1. Schema/migration giữ dữ liệu hiện hữu; backup local trước thay đổi. Seed upsert tài khoản và đổi mật khẩu đã chọn; chỉ chạy khi có ý định này.
 
-Worker phục vụ bản build trong `frontend/dist`. Chạy lại `npm --prefix frontend run build` từ thư mục gốc khi muốn xem thay đổi giao diện qua cổng 8787.
+| Username | Role | Khu vực |
+| --- | --- | --- |
+| D01 | DAN | — |
+| TG01 | THUGOM | Thuận An |
+| TG02 | THUGOM | Thủ Dầu Một |
+| AD01 | ADMIN | — |
 
-## Frontend đã triển khai theo baseline v1.3
+Mật khẩu là giá trị nhập trong `DEMO_PASSWORD`, không hardcode. Muốn đổi riêng TG02: đặt biến môi trường rồi chạy `node scripts/seed-users.mjs TG02`. Script luôn dùng `--local`, không hỗ trợ remote.
 
-| Màn hình | Chức năng |
-| --- | --- |
-| M01 · Đăng nhập | Hiện hoặc ẩn mật khẩu, báo lỗi, khôi phục phiên và chuyển trang theo vai trò. Khi mở trang sai quyền, người dùng thấy thông báo và có thể quay về trang của mình. |
-| M02 · Người dân | Tổng quan hiển thị KPI toàn bộ yêu cầu cá nhân. Bấm thẻ trạng thái để lọc danh sách, chọn **Tất cả** để bỏ lọc. Có phân trang, xem chi tiết và nút **Trang trước** khi polling làm trang hiện tại hết đơn. |
-| M03 · Tạo yêu cầu | Form ba bước gồm chọn loại rác và khối lượng, đặt lịch rồi xác nhận. Có thể sửa từng nhóm ở bước xác nhận. Form giữ dữ liệu khi quay lại, khóa nút trong lúc gửi và chuyển focus đến tiêu đề bước hoặc trường lỗi. |
-| M04 · Người thu gom | Xem đơn chờ và đơn đã nhận, lọc theo khu vực và loại rác, nhận hoặc hoàn thành đơn. Giao diện xử lý xung đột khi người khác đã nhận. Gợi ý ưu tiên bật tùy chọn và mặc định tắt. |
-| M05 · Quản trị | Có ba KPI, biểu đồ vòng theo trạng thái, biểu đồ thanh theo loại rác và biểu đồ đơn mới/hoàn thành trong 7 hoặc 14 ngày. Danh sách có bộ lọc, phân trang và chuyển sang dạng thẻ trên màn hình nhỏ. |
-| M06 · Chi tiết | Tóm tắt yêu cầu, hiển thị dữ liệu theo quyền và timeline ba mốc theo giờ Việt Nam. Có nhãn **Hiện tại**, hỗ trợ đóng bằng `Escape` và trả focus về nút mở. |
+Khi sửa giao diện, giữ Worker cổng 8787, tại repo root chạy `npm --prefix frontend run dev`, mở URL Vite (thường cổng 5173). Proxy chuyển `/api` về Worker. Xem thay đổi qua cổng 8787 cần build frontend lại.
 
-Các màn hình dữ liệu có trạng thái đang tải, lỗi và danh sách rỗng. Polling chờ 5 giây giữa các lượt tải khi tab hiển thị. Khi lỗi kết nối, giao diện giữ dữ liệu gần nhất nếu có và báo **Chưa đồng bộ**.
+## Kiểm thử tái lập
 
-## Backend đã triển khai
-
-- **Xác thực:** đăng nhập, đọc phiên và đăng xuất. Worker phân quyền theo vai trò và từng yêu cầu. D1 lưu mật khẩu và token phiên ở dạng băm.
-- **Yêu cầu thu gom:** tạo, liệt kê, lọc, phân trang, xem chi tiết, nhận và hoàn thành. Worker kiểm tra dữ liệu đầu vào và che địa chỉ, ghi chú của đơn chờ đối với người thu gom.
-- **Quản trị:** API danh sách có bộ lọc và API thống kê theo trạng thái, loại rác và hoạt động theo ngày.
-- **Dữ liệu D1:** bốn bảng `Users`, `Sessions`, `Requests` và `RequestLogs`. Thay đổi trạng thái và ghi nhật ký thực hiện trong cùng giao dịch. Khi hai người cùng nhận, chỉ một thao tác thành công, thao tác còn lại trả HTTP `409`.
-
-## Kiểm tra và nghiệm thu
-
-Chạy tại thư mục gốc để kiểm tra frontend.
+Chạy từ repo root:
 
 ```powershell
 npm --prefix frontend run lint
 npm --prefix frontend run build
+npm --prefix backend test
+npm --prefix backend run test:browser
+npm --prefix backend run experiment:api
+npm --prefix backend run experiment:polling
+npm --prefix backend run experiment:report
+npm --prefix backend run deploy:check
 ```
 
-Luồng tạo → nhận → hoàn thành đã được xác minh trên Edge với Worker và D1 cục bộ. Trong 10 lượt thử nhận đồng thời, mỗi lượt ghi nhận một HTTP `200`, một HTTP `409` và một log `ACCEPT` trên D1.
+Tests tạo D1 cô lập, password ngẫu nhiên và session độc lập; không ghi database local của bạn hoặc remote. Browser dùng Edge cài sẵn; máy khác đặt `BROWSER_PATH` trỏ đến Edge/Chromium. Không tự tải browser. Kết quả JSON và ảnh thật lưu vào `docs/evidence/`, cập nhật theo lần chạy mới nhất.
 
-Ở lần rà soát gần nhất, lint không có cảnh báo và build thành công. Đã kiểm tra nhanh cả ba vai trò trên Edge ở chiều rộng 390 px với Worker và D1 cục bộ. Lượt này bao gồm bộ lọc của người dân, form và tên khu vực, thông báo sai quyền cùng biểu đồ quản trị.
+TN01 trong integration: 10 cuộc tranh nhận bằng hai HTTP client, kiểm tra CollectorId/AcceptedAt/một ACCEPT. TN02 dùng hai browser context, timer thật ở 2/5/10 giây, năm mẫu mỗi mức và cửa sổ quan sát GET ít nhất 60 giây/mức; mất khoảng ba đến bốn phút. Build TN02 ở thư mục tạm, không thay `frontend/dist`. Build bình thường không đặt `VITE_POLL_INTERVAL_MS`, polling mặc định 5000 ms. Tab ẩn/logout dừng polling; offline giữ dữ liệu, báo chưa đồng bộ; 401 về login; 409 tải lại danh sách.
 
-### Checklist nghiệm thu frontend
+TN03 đo 20 mẫu cho mỗi trong 10 API chính và thử GET concurrency 4. Số đo local không đại diện hiệu năng cloud. Xem [phương pháp và kết quả](docs/EXPERIMENTS.md).
 
-Chạy ứng dụng theo mục **Chạy cục bộ**. Dùng các cửa sổ hoặc hồ sơ trình duyệt độc lập cho `D01`, `TG02` và `AD01` để mỗi vai trò có phiên riêng. Khi nghiệm thu chính thức, lặp lại trên URL HTTPS và ghi ngày, bản commit, URL, thiết bị cùng kết quả từng ca.
+## Demo
 
-| Ca kiểm thử | Cách thực hiện | Điều kiện đạt |
-| --- | --- | --- |
-| M01 · Phiên và quyền | Thử mật khẩu sai, đăng nhập bằng từng vai trò, tải lại trang, mở route của vai trò khác rồi đăng xuất. | Trang sai quyền hiển thị **Không có quyền truy cập** và nút quay về. Route bảo vệ yêu cầu đăng nhập sau khi đăng xuất. |
-| M02 · Tổng quan và lọc đơn | Dùng `D01` bấm từng thẻ trạng thái rồi chọn **Tất cả**. Với dữ liệu đủ hai trang, thử giảm số đơn của bộ lọc khi đang ở trang cuối. | KPI giữ số liệu toàn bộ yêu cầu. Danh sách đổi theo trạng thái, đổi bộ lọc về trang đầu, và **Trang trước** vẫn có khi trang hiện tại hết đơn. |
-| M03 · Tạo yêu cầu | Dùng bàn phím để chuyển bước, thử thiếu trường, bấm **Sửa** ở bước xác nhận rồi gửi một đơn hợp lệ. | Focus tới tiêu đề bước hoặc trường lỗi. Form giữ dữ liệu khi sửa. Đơn mới xuất hiện ở trạng thái **Chờ nhận**. |
-| M04 · Thu gom | Dùng `TG02` lọc theo khu vực, nhận đơn rồi chuyển sang tab Đã nhận và hoàn thành. Thử bật gợi ý ưu tiên. | Đơn chờ che địa chỉ và ghi chú. Đơn đã nhận hiển thị dữ liệu theo quyền. Bật gợi ý vẫn phân trang và hiện điểm ưu tiên. |
-| M04 · Nhận đồng thời | Dùng `TG01` và `TG02` mở cùng một đơn chờ rồi bấm nhận gần như đồng thời. | Một thao tác thành công, bên còn lại nhận `409` và danh sách tự làm mới. |
-| M05 · Quản trị | Dùng `AD01` lọc theo loại rác, trạng thái và khoảng ngày. Đổi biểu đồ hoạt động giữa 7 và 14 ngày. | Bộ lọc và phân trang đúng. KPI và các biểu đồ khớp dữ liệu D1 theo phạm vi hiển thị. |
-| M06 · Chi tiết và di động | Mở chi tiết khi dùng bàn phím. Kiểm tra ở chiều rộng 390 px và thử đóng bằng `Escape`. | Hiển thị ba mốc theo giờ Việt Nam, có thể đóng bằng bàn phím và focus trở về nút mở. Danh sách quản trị hiển thị dạng thẻ. |
-| F10 · Polling và lỗi mạng | Đặt cửa sổ người dân và thu gom cạnh nhau. Đổi trạng thái từ người thu gom, quan sát UI người dân. Sau đó thử ẩn tab và chuyển Network sang Offline. | UI đổi trạng thái khi polling. Tab ẩn dừng gọi GET. Khi lỗi, UI giữ dữ liệu gần nhất, báo chưa đồng bộ và phục hồi khi thử lại. |
+1. Dùng profile/context riêng cho D01, TG01, TG02 và AD01 để cookie độc lập.
+2. D01 tạo đơn qua form ba bước, xem chi tiết đơn chờ.
+3. TG01/TG02 tranh nhận cùng đơn. Dùng integration và SQL để minh chứng một HTTP 200, một HTTP 409 và một ACCEPT.
+4. Người nhận mở **Đơn đã nhận**, hoàn thành. D01 thấy timeline ba mốc; AD01 thấy KPI/biểu đồ cập nhật.
+5. Thử offline/khôi phục, refresh và logout; không chụp password/token/cookie thật.
 
-Để kiểm tra số lượt gọi API, mở DevTools → Network và lọc `/api/requests/`. Mỗi lượt polling danh sách chỉ tải trang đang xem, kể cả khi có nhiều trang hoặc bật gợi ý ưu tiên. API đơn cá nhân trả KPI cho toàn bộ đơn cùng lượt gọi. Khi mở drawer, theo dõi riêng GET chi tiết.
+## Tài liệu và triển khai
 
-Để đo TN02, thay tạm `POLL_INTERVAL` trong [useRequestData.js](frontend/src/services/useRequestData.js) lần lượt thành 2000, 5000 và 10000 ms. Giữ cùng một màn hình ở ba phép đo, thử ít nhất 5 lượt mỗi mức và ghi thời gian từ khi POST đổi trạng thái trả `200` đến khi UI người dân đổi trạng thái. Đếm số GET nghiệp vụ trong 60 giây, ghi rõ endpoint được đếm và trả cấu hình về 5000 ms sau khi đo.
+- [Kiến trúc, use case, activity, sequence](docs/ARCHITECTURE.md)
+- [Database, ERD và migration](docs/DATABASE.md)
+- [12 API và JSON](docs/API.md)
+- [TC01–TC20](docs/TEST_REPORT.md)
+- [RQ01–RQ03 / TN01–TN03](docs/EXPERIMENTS.md)
+- [Triển khai và khôi phục](docs/DEPLOYMENT.md)
+- [Checklist minh chứng](docs/EVIDENCE_CHECKLIST.md)
 
+Dry-run đóng gói thành công. Còn cần duyệt tài khoản Cloudflare, database đích, ghi schema/migration/seed và deploy. PBKDF2 310000 chạy được trên workerd local; cần kiểm tra hosted runtime/CPU Free trước nghiệm thu cloud. Không giảm vòng hash, tự nâng gói hoặc thêm thanh toán để che lỗi.

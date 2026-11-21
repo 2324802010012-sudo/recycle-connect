@@ -1,4 +1,5 @@
 import { handleRequests } from "./requests.js";
+import { PASSWORD_ITERATIONS, PASSWORD_BYTES, parsePasswordHash } from "../../shared/password-policy.mjs";
 
 const encoder = new TextEncoder();
 
@@ -12,12 +13,12 @@ function json(data, status = 200, extraHeaders = {}) {
   });
 }
 
-function errorResponse(message, status) {
+function errorResponse(message, status, code, extraHeaders = {}) {
   return json({
     success: false,
-    error: { message },
+    error: { code: code ?? ({ 400: 'INVALID_INPUT', 401: 'UNAUTHENTICATED', 403: 'FORBIDDEN', 404: 'NOT_FOUND', 500: 'INTERNAL_ERROR' }[status]), message },
     message,
-  }, status);
+  }, status, extraHeaders);
 }
 
 function randomToken() {
@@ -51,11 +52,11 @@ async function hashPassword(password, salt) {
     {
       name: "PBKDF2",
       salt: encoder.encode(salt),
-      iterations: 310000,
+      iterations: PASSWORD_ITERATIONS,
       hash: "SHA-256",
     },
     key,
-    256
+    PASSWORD_BYTES * 8
   );
 
   return Array.from(new Uint8Array(bits), b =>
@@ -64,21 +65,10 @@ async function hashPassword(password, salt) {
 }
 
 async function verifyPassword(password, stored) {
-  if (typeof stored !== "string") return false;
-
-  const parts = stored.split("$");
-
-  if (
-    parts.length !== 4 ||
-    parts[0] !== "pbkdf2_sha256" ||
-    parts[1] !== "310000" ||
-    !/^[0-9a-f]{64}$/.test(parts[3])
-  ) {
-    return false;
-  }
-
-  const actual = await hashPassword(password, parts[2]);
-  const expected = parts[3];
+  const parsed = parsePasswordHash(stored);
+  // Use the same expensive path for unknown accounts and malformed hashes.
+  const actual = await hashPassword(password, parsed?.salt ?? '0'.repeat(64));
+  const expected = parsed?.digest ?? '0'.repeat(64);
 
   let diff = 0;
 
@@ -86,7 +76,7 @@ async function verifyPassword(password, stored) {
     diff |= expected.charCodeAt(i) ^ actual.charCodeAt(i);
   }
 
-  return diff === 0;
+  return parsed !== null && diff === 0;
 }
 
 function getCookie(request, name) {
@@ -229,11 +219,11 @@ export default {
           return errorResponse("JSON không hợp lệ.", 400);
         }
 
-        const username = String(body?.username || "").trim();
-        const password = String(body?.password || "");
+        const username = typeof body?.username === 'string' ? body.username.trim() : '';
+        const password = typeof body?.password === 'string' ? body.password : '';
 
         if (
-          !username ||
+          !body || Array.isArray(body) || !username ||
           username.length > 30 ||
           !password ||
           password.length > 128
@@ -243,6 +233,12 @@ export default {
             400
           );
         }
+
+        const { success: allowed } = await env.LOGIN_LIMITER.limit({
+          key: 'login:' + (request.headers.get('CF-Connecting-IP') ?? 'local'),
+        });
+        if (!allowed) return errorResponse('Bạn đăng nhập quá nhiều lần. Vui lòng thử lại sau một phút.', 429,
+          'LOGIN_RATE_LIMITED', { 'Retry-After': '60' });
 
         const user = await env.DB.prepare(`
           SELECT
@@ -256,10 +252,17 @@ export default {
           WHERE Username = ?
         `).bind(username).first();
 
-        if (
-          !user ||
-          !(await verifyPassword(password, user.PasswordHash))
-        ) {
+        let verified;
+        try {
+          verified = await verifyPassword(password, user?.PasswordHash);
+        } catch (error) {
+          if (['NotSupportedError', 'OperationError'].includes(error.name)) {
+            return errorResponse('Dịch vụ xác thực chưa tương thích cấu hình bảo mật. Vui lòng liên hệ quản trị viên.',
+              503, 'PASSWORD_RUNTIME_UNSUPPORTED');
+          }
+          throw error;
+        }
+        if (!user || !verified) {
           return errorResponse(
             "Tên đăng nhập hoặc mật khẩu không đúng.",
             401
@@ -271,7 +274,7 @@ export default {
 
         const createdAt = new Date().toISOString();
         const expiresAt = new Date(
-          Date.now() + 8 * 60 * 60 * 1000
+          Date.parse(createdAt) + 8 * 60 * 60 * 1000
         ).toISOString();
 
         await env.DB.prepare(`
@@ -293,6 +296,7 @@ export default {
         return json({
           success: true,
           user: publicUser(user),
+          data: { user: publicUser(user) },
         }, 200, {
           "Set-Cookie": sessionCookie(token, request),
         });
@@ -312,6 +316,7 @@ export default {
         return json({
           success: true,
           user: publicUser(user),
+          data: { user: publicUser(user) },
         });
       }
 
@@ -320,7 +325,9 @@ export default {
         const token = getCookie(request, "rc_session");
 
         if (!token || !/^[0-9a-f]{64}$/.test(token)) {
-          return errorResponse("Chưa đăng nhập.", 401);
+          return errorResponse("Chưa đăng nhập.", 401, 'UNAUTHENTICATED', {
+            'Set-Cookie': sessionCookie('', request, 0),
+          });
         }
 
         const user = await currentUser(request, env);
@@ -328,7 +335,7 @@ export default {
         if (!user) {
           return errorResponse(
             "Phiên đăng nhập không hợp lệ.",
-            401
+            401, 'UNAUTHENTICATED', { 'Set-Cookie': sessionCookie('', request, 0) }
           );
         }
 

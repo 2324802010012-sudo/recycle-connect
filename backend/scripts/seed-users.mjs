@@ -19,6 +19,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { tmpdir } from 'node:os'
 import { AREA_OPTIONS } from '../../shared/request-options.mjs'
+import { PASSWORD_ITERATIONS, PASSWORD_BYTES, PASSWORD_SCHEME } from '../../shared/password-policy.mjs'
 
 const backend = fileURLToPath(new URL('../', import.meta.url))
 const cli = join(backend, 'node_modules', 'wrangler', 'bin', 'wrangler.js')
@@ -56,12 +57,12 @@ function hashPassword(password) {
   const hash = pbkdf2Sync(
     password,
     Buffer.from(salt, 'utf8'),
-    310000,
-    32,
+    PASSWORD_ITERATIONS,
+    PASSWORD_BYTES,
     'sha256'
   ).toString('hex')
 
-  return `pbkdf2_sha256$310000$${salt}$${hash}`
+  return `${PASSWORD_SCHEME}$${PASSWORD_ITERATIONS}$${salt}$${hash}`
 }
 
 function sqlValue(value) {

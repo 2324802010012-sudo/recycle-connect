@@ -1,7 +1,9 @@
 ﻿import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-const POLL_INTERVAL = 5000
+// Build-time override for TN02; normal builds always default to five seconds.
+const experimentInterval = Number(import.meta.env.VITE_POLL_INTERVAL_MS)
+const POLL_INTERVAL = [2000, 5000, 10000].includes(experimentInterval) ? experimentInterval : 5000
 const empty = { data: null, error: '', updatedAt: null }
 
 export function useRequestData(load, { enabled = true, poll = false, clearOnError = false } = {}) {

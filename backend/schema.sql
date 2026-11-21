@@ -1,7 +1,7 @@
 
 -- =====================================================
 -- RECYCLE CONNECT
--- DATABASE SCHEMA - BASELINE v1.3
+-- CORE SCHEMA - BASELINE v1.4 prompt (apply migrations/ after this file)
 -- Cloudflare D1 / SQLite
 -- =====================================================
 

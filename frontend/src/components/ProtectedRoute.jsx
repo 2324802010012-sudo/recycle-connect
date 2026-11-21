@@ -11,6 +11,7 @@ function ProtectedRoute({ children, allowedRoles = [] }) {
   const [user, setUser] = useState(null)
   const [error, setError] = useState('')
   const [retry, setRetry] = useState(0)
+  const [verifiedPath, setVerifiedPath] = useState(null)
 
   useEffect(() => {
     let active = true
@@ -34,6 +35,7 @@ function ProtectedRoute({ children, allowedRoles = [] }) {
         }
       } finally {
         if (active) {
+          setVerifiedPath(location.pathname)
           setLoading(false)
         }
       }
@@ -46,7 +48,7 @@ function ProtectedRoute({ children, allowedRoles = [] }) {
     }
   }, [location.pathname, retry])
 
-  if (loading) {
+  if (loading || verifiedPath !== location.pathname) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F8FAF9]">
         <p role="status" className="text-[#167D61]">
