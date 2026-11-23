@@ -1,24 +1,19 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "keywords": [],
-  "author": "",
+  "description": "Recycle Connect API",
+  "private": true,
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "scripts": {
-    "test": "node tests/integration.mjs",
-    "test:browser": "node tests/browser.mjs",
-    "experiment:api": "node tests/experiments.mjs",
-    "experiment:polling": "node tests/polling.mjs",
-    "experiment:report": "node tests/report.mjs",
+    "dev": "wrangler dev --local --port 8787",
+    "deploy": "wrangler deploy",
     "deploy:check": "wrangler deploy --dry-run --outdir .wrangler/deploy-check"
   },
   "devDependencies": {
-    "esbuild": "0.28.2",
-    "miniflare": "5.20261118.0-beta",
-    "playwright-core": "1.65.1",
     "wrangler": "^4.165.0"
+  },
+  "dependencies": {
+    "@noble/hashes": "2.4.0"
   }
 }

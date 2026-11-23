@@ -1,3 +1,4 @@
+import { apiFetch, readApiResponse } from './apiClient'
 const requestFields = [
   'RequestId', 'CollectorId', 'CollectorName', 'WasteType', 'QuantityKg',
   'Address', 'Area', 'PreferredDate', 'Note', 'Status', 'CreatedAt',
@@ -11,26 +12,20 @@ function normalizeRequest(request) {
   }))
 }
 
-async function requestApi(path, { query, signal, method = 'GET', body } = {}) {
+async function requestApi(path, { query, signal, method = 'GET', body, idempotencyKey } = {}) {
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(query ?? {})) {
     if (value !== '' && value != null) params.set(key, value)
   }
-  const response = await fetch(`/api/${path}${params.size ? `?${params}` : ''}`, {
+  const response = await apiFetch(`/api/${path}${params.size ? `?${params}` : ''}`, {
     method,
     credentials: 'same-origin',
     cache: 'no-store',
-    signal: signal ?? AbortSignal.timeout(15000),
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    signal,
+    headers: body ? { 'Content-Type': 'application/json', ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}) } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   })
-  const result = await response.json().catch(() => null)
-
-  if (!response.ok || result?.success !== true) {
-    const message = result?.error?.message || 'Không thể tải dữ liệu. Vui lòng thử lại.'
-    throw Object.assign(new Error(message), { status: response.status })
-  }
-
+  const result = await readApiResponse(response, { mutation: method !== 'GET' })
   return result.data
 }
 
@@ -44,8 +39,8 @@ export async function getRequestDetail(id, signal) {
   return normalizeRequest(data.request ?? data)
 }
 
-export function createRequest(body) {
-  return requestApi('requests', { method: 'POST', body })
+export function createRequest(body, idempotencyKey) {
+  return requestApi('requests', { method: 'POST', body, idempotencyKey })
 }
 
 export function updateRequest(id, action) {

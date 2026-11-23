@@ -14,7 +14,7 @@ import StatusBadge from '../components/StatusBadge'
 import { getAdminStats, getRequestPage } from '../services/requestService'
 import { areaLabel } from '../services/requestOptions'
 import RequestCard from '../components/RequestCard'
-import { useRequestData } from '../services/useRequestData'
+import { useRequestData } from '../hooks/useRequestData'
 import RequestFeedback from '../components/RequestFeedback'
 import RequestPagination from '../components/RequestPagination'
 import AdminCharts from '../components/AdminCharts'
@@ -81,7 +81,6 @@ function Admin({ user }) {
 
   return (
     <div className="min-h-screen bg-[#f5f8f6] text-[#253B35]">
-      {/* HEADER */}
       <header className="border-b bg-white/95">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-5">
           <div className="flex items-center gap-3">
@@ -179,7 +178,6 @@ function Admin({ user }) {
 
         {statistics.data && <AdminCharts stats={statistics.data} wasteLabels={wasteLabels} />}
 
-        {/* BỘ LỌC */}
         <section className="rounded-3xl border bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-5 flex items-center gap-3">
             <Filter
@@ -285,7 +283,6 @@ function Admin({ user }) {
           </div>
         </section>
 
-        {/* DANH SÁCH */}
         <section className="overflow-hidden rounded-3xl border bg-white shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b p-5">
             <div className="flex items-center gap-3">

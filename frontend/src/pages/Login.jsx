@@ -1,8 +1,8 @@
-﻿
 import { useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, LockKeyhole, UserRound, Recycle } from 'lucide-react'
 import { login, rolePaths } from '../services/authService'
+import { useRetryCooldown } from '../hooks/useRetryCooldown'
 
 const protectedPaths = new Set([...Object.values(rolePaths), '/dan/tao-yeu-cau'])
 
@@ -16,10 +16,11 @@ function Login() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const submitting = useRef(false)
+  const cooldown = useRetryCooldown()
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (submitting.current) return
+    if (submitting.current || cooldown.blocked) return
     setError('')
 
     if (!username.trim() || !password) {
@@ -46,6 +47,7 @@ function Login() {
       }
       navigate(protectedPaths.has(state?.from) ? state.from : home, { replace: true })
     } catch (err) {
+      cooldown.defer(err)
       setError(err.message || 'Không thể kết nối máy chủ.')
     } finally {
       submitting.current = false
@@ -71,6 +73,7 @@ function Login() {
           </p>
         </div>
 
+        {state?.justRegistered && <p role="status" className="mb-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">Tạo tài khoản thành công. Hãy đăng nhập để sử dụng dịch vụ.</p>}
         <form onSubmit={handleSubmit} className="space-y-5">
 
           <div>
@@ -87,6 +90,7 @@ function Login() {
               <input
                 id="username"
                 type="text"
+                required maxLength={30}
                 autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -110,6 +114,7 @@ function Login() {
               <input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
+                required maxLength={128}
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -121,6 +126,7 @@ function Login() {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                aria-pressed={showPassword}
                 className="absolute right-3 top-3 text-gray-500"
               >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -136,14 +142,24 @@ function Login() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || cooldown.blocked}
             aria-busy={loading}
             className="w-full bg-[#167D61] hover:bg-[#11634D] text-white font-semibold py-3 rounded-xl disabled:opacity-60"
           >
-            {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+            {loading ? 'Đang đăng nhập...' : cooldown.blocked ? 'Vui lòng chờ để đăng nhập lại' : 'Đăng nhập'}
           </button>
         </form>
-
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600">
+            Chưa có tài khoản?{' '}
+            <Link
+              to="/register"
+              className="font-semibold text-[#167D61] hover:text-[#11634D] hover:underline transition-colors"
+            >
+              Đăng ký ngay
+            </Link>
+          </p>
+        </div>
         <div className="text-center mt-6">
           <Link to="/" className="text-[#167D61] hover:underline">
             ← Quay về trang chủ

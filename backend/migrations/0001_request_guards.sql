@@ -1,5 +1,4 @@
--- Additive guards: existing rows are retained. Review legacy invalid rows before
--- applying remotely. No DROP TABLE, DELETE or rewrite of business data.
+-- Chỉ thêm ràng buộc cho thao tác mới; kiểm tra dữ liệu cũ trước khi áp dụng remote.
 CREATE TRIGGER IF NOT EXISTS requests_validate_insert
 BEFORE INSERT ON Requests
 BEGIN

@@ -1,15 +1,6 @@
-
--- =====================================================
--- RECYCLE CONNECT
--- CORE SCHEMA - BASELINE v1.4 prompt (apply migrations/ after this file)
--- Cloudflare D1 / SQLite
--- =====================================================
-
+-- Chỉ khởi tạo database mới; sau đó áp dụng các migration theo thứ tự.
 PRAGMA foreign_keys = ON;
 
--- =====================================================
--- 1. USERS - QUAN LY TAI KHOAN
--- =====================================================
 
 CREATE TABLE IF NOT EXISTS Users (
     UserId INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,9 +26,6 @@ CREATE TABLE IF NOT EXISTS Users (
     )
 );
 
--- =====================================================
--- 2. SESSIONS - QUAN LY PHIEN DANG NHAP
--- =====================================================
 
 CREATE TABLE IF NOT EXISTS Sessions (
     SessionId INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,9 +45,6 @@ CREATE TABLE IF NOT EXISTS Sessions (
         ON DELETE RESTRICT
 );
 
--- =====================================================
--- 3. REQUESTS - YEU CAU THU GOM
--- =====================================================
 
 CREATE TABLE IF NOT EXISTS Requests (
     RequestId INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -148,9 +133,6 @@ CREATE TABLE IF NOT EXISTS Requests (
     )
 );
 
--- =====================================================
--- 4. REQUEST LOGS - NHAT KY YEU CAU
--- =====================================================
 
 CREATE TABLE IF NOT EXISTS RequestLogs (
     LogId INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -177,9 +159,6 @@ CREATE TABLE IF NOT EXISTS RequestLogs (
         ON DELETE RESTRICT
 );
 
--- =====================================================
--- 5. INDEXES - TOI UU TRUY VAN
--- =====================================================
 
 CREATE INDEX IF NOT EXISTS idx_users_role
 ON Users(Role);
@@ -213,7 +192,3 @@ ON RequestLogs(RequestId, CreatedAt);
 
 CREATE INDEX IF NOT EXISTS idx_requestlogs_actor
 ON RequestLogs(ActorId);
-
--- =====================================================
--- END OF SCHEMA
--- =====================================================

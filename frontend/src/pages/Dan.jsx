@@ -14,7 +14,7 @@ import { logout } from '../services/authService'
 import EmptyState from '../components/EmptyState'
 
 import { getRequestPage } from '../services/requestService'
-import { useRequestData } from '../services/useRequestData'
+import { useRequestData } from '../hooks/useRequestData'
 import RequestFeedback from '../components/RequestFeedback'
 import RequestPagination from '../components/RequestPagination'
 import RequestCard from '../components/RequestCard'

@@ -6,7 +6,7 @@ import {
 import StatusBadge from './StatusBadge'
 import { getRequestDetail } from '../services/requestService'
 import { areaLabel } from '../services/requestOptions'
-import { useRequestData } from '../services/useRequestData'
+import { useRequestData } from '../hooks/useRequestData'
 import RequestFeedback from './RequestFeedback'
 
 const wasteLabels = {

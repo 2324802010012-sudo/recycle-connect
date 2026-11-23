@@ -8,8 +8,8 @@
         <p>Chưa đồng bộ. Cập nhật lần cuối lúc {state.updatedAt.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}.</p>
       )}
       <p>{state.error}</p>
-      <button type="button" onClick={state.refresh} className="mt-2 font-semibold underline">
-        Thử lại
+      <button type="button" onClick={state.refresh} disabled={Boolean(state.retryAt)} className="mt-2 font-semibold underline disabled:opacity-50">
+        {state.retryAt ? 'Vui lòng chờ trước khi thử lại' : 'Thử lại'}
       </button>
     </div>
   )

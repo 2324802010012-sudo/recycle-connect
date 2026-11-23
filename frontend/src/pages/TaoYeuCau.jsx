@@ -10,6 +10,7 @@ import {
 
 import { createRequest } from '../services/requestService'
 import { AREA_OPTIONS, areaLabel, vietnamDate } from '../services/requestOptions'
+import { useRetryCooldown } from '../hooks/useRetryCooldown'
 
 const wasteTypes = [
   { value: 'GIAY', label: 'Giấy', Icon: FileText },
@@ -74,7 +75,10 @@ function TaoYeuCau() {
   const navigate = useNavigate()
   const [localToday] = useState(() => vietnamDate(new Date()))
   const [submitting, setSubmitting] = useState(false)
+  const [uncertain, setUncertain] = useState(false)
+  const cooldown = useRetryCooldown()
   const pending = useRef(false)
+  const lastAttempt = useRef({ key: null, payload: null })
   const formElement = useRef(null)
   const stepHeading = useRef(null)
   const [focusTarget, setFocusTarget] = useState(null)
@@ -95,6 +99,7 @@ function TaoYeuCau() {
   }
 
   function updateField(field, value) {
+    if (uncertain) return
     setForm(prev => ({
       ...prev,
       [field]: value,
@@ -161,7 +166,7 @@ function TaoYeuCau() {
   }
 
   function goToStep(target) {
-    if (pending.current) return
+    if (pending.current || uncertain) return
     setError('')
     setInvalidField('')
     setStep(target)
@@ -170,15 +175,14 @@ function TaoYeuCau() {
 
   async function handleSubmit(event) {
     event.preventDefault()
-    if (pending.current) return
+    if (pending.current || cooldown.blocked) return
     if (step < 3) {
       nextStep()
       return
     }
 
-    // Validate both steps again: the user may have returned to a previous step,
-    // or the selected date may have become invalid while the form was open.
-    for (const targetStep of [1, 2]) {
+    // Kiểm tra lại hai bước vì ngày hẹn có thể đã qua khi form mở lâu.
+    for (const targetStep of uncertain ? [] : [1, 2]) {
       const failure = validateStep(targetStep)
       if (failure) {
         setStep(targetStep)
@@ -191,25 +195,31 @@ function TaoYeuCau() {
     setSubmitting(true)
     setError('')
     try {
-      await createRequest({
+      const payload = uncertain ? JSON.parse(lastAttempt.current.payload) : {
         wasteType: form.WasteType,
         quantityKg: Number(form.QuantityKg),
         address: form.Address.trim(),
         area: form.Area,
         preferredDate: form.PreferredDate,
         note: form.Note.trim(),
-      })
+      }
+      const normalized = JSON.stringify(payload)
+      if (lastAttempt.current.payload !== normalized) {
+        lastAttempt.current = { key: crypto.randomUUID(), payload: normalized }
+      }
+      // Mất phản hồi vẫn gửi lại cùng key để không tạo đơn trùng.
+      await createRequest(payload, lastAttempt.current.key)
       navigate('/dan', { replace: true, state: { requestCreated: true } })
     } catch (error) {
+      cooldown.defer(error)
       if (error.status === 401) {
         navigate('/login', { replace: true, state: { from: '/dan/tao-yeu-cau' } })
         return
       }
-      setError(
-        !error.status
-          ? 'Không xác định được yêu cầu đã được lưu hay chưa do lỗi kết nối. Vui lòng kiểm tra danh sách yêu cầu của bạn trước khi thử gửi lại.'
-          : (error.message || 'Không thể gửi yêu cầu.')
-      )
+      if (error.unknownOutcome) {
+        setUncertain(true)
+        setError('Chưa thể xác nhận yêu cầu đã được lưu. Thông tin được giữ nguyên; chọn “Gửi lại an toàn” để kiểm tra và gửi lại cùng mã thao tác.')
+      } else setError(error.message || 'Không thể gửi yêu cầu.')
     } finally {
       pending.current = false
       setSubmitting(false)
@@ -336,12 +346,12 @@ function TaoYeuCau() {
                     <ClipboardCheck size={21} className="text-[#167d61]" aria-hidden="true" />
                     Xác nhận thông tin
                   </h2>
-                  <ReviewGroup icon={Recycle} title="Thông tin rác" disabled={submitting} onEdit={() => goToStep(1)}
+                  <ReviewGroup icon={Recycle} title="Thông tin rác" disabled={submitting || uncertain} onEdit={() => goToStep(1)}
                     fields={[
                       ['Loại rác', selectedWaste?.label],
                       ['Khối lượng', `${form.QuantityKg} kg`],
                     ]} />
-                  <ReviewGroup icon={MapPin} title="Lịch thu gom" disabled={submitting} onEdit={() => goToStep(2)}
+                  <ReviewGroup icon={MapPin} title="Lịch thu gom" disabled={submitting || uncertain} onEdit={() => goToStep(2)}
                     fields={[
                       ['Khu vực', areaLabel(form.Area)],
                       ['Ngày mong muốn', form.PreferredDate.split('-').reverse().join('/')],
@@ -360,16 +370,16 @@ function TaoYeuCau() {
 
             <div className="flex flex-col-reverse gap-2 border-t bg-[#f8faf9] p-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
               {step > 1 && (
-                <button type="button" onClick={() => goToStep(step - 1)} disabled={submitting}
+                <button type="button" onClick={() => goToStep(step - 1)} disabled={submitting || uncertain}
                   className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border bg-white px-4 py-2 text-sm font-semibold text-[#153e31] transition hover:bg-[#eef4f1] disabled:opacity-50">
                   <ArrowLeft size={17} aria-hidden="true" />
                   Quay lại
                 </button>
               )}
 
-              <button type="submit" disabled={submitting} aria-busy={submitting}
+              <button type="submit" disabled={submitting || cooldown.blocked} aria-busy={submitting}
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#167d61] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#11634d] disabled:opacity-60 sm:ml-auto">
-                {step === 3 ? (submitting ? 'Đang gửi…' : 'Xác nhận yêu cầu') : 'Tiếp tục'}
+                {cooldown.blocked ? 'Vui lòng chờ để thử lại' : step === 3 ? (submitting ? 'Đang gửi…' : uncertain ? 'Gửi lại an toàn' : 'Xác nhận yêu cầu') : 'Tiếp tục'}
                 {step === 3 ? <Check size={18} aria-hidden="true" /> : <ArrowRight size={18} aria-hidden="true" />}
               </button>
             </div>
