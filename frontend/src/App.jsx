@@ -1,4 +1,3 @@
-﻿
 import {
   BrowserRouter,
   Routes,
@@ -7,6 +6,7 @@ import {
 
 import Home from './pages/Home'
 import Login from './pages/Login'
+import Register from './pages/Register'
 import Dan from './pages/Dan'
 import ThuGom from './pages/ThuGom'
 import Admin from './pages/Admin'
@@ -19,6 +19,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route path="/dan" element={
           <ProtectedRoute allowedRoles={['DAN']}>
             {user => <Dan user={user} />}

@@ -1,8 +1,4 @@
-﻿
-import {
-  randomBytes,
-  pbkdf2Sync
-} from 'node:crypto'
+import { randomBytes } from 'node:crypto'
 
 import {
   closeSync,
@@ -11,14 +7,13 @@ import {
   writeFileSync
 } from 'node:fs'
 
-import {
-  spawnSync
-} from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { tmpdir } from 'node:os'
 import { AREA_OPTIONS } from '../../shared/request-options.mjs'
+import { createPasswordHash } from '../../shared/passwords.mjs'
 
 const backend = fileURLToPath(new URL('../', import.meta.url))
 const cli = join(backend, 'node_modules', 'wrangler', 'bin', 'wrangler.js')
@@ -50,20 +45,6 @@ const accounts = [
   }
 ]
 
-function hashPassword(password) {
-  const salt = randomBytes(32).toString('hex')
-
-  const hash = pbkdf2Sync(
-    password,
-    Buffer.from(salt, 'utf8'),
-    310000,
-    32,
-    'sha256'
-  ).toString('hex')
-
-  return `pbkdf2_sha256$310000$${salt}$${hash}`
-}
-
 function sqlValue(value) {
   if (value === null) return 'NULL'
 
@@ -71,11 +52,13 @@ function sqlValue(value) {
 }
 
 const password = process.env.DEMO_PASSWORD
-const username = process.argv[2]?.toUpperCase()
+const args = process.argv.slice(2)
+const remote = args.includes('--remote')
+const username = args.filter(x => x !== '--remote')[0]?.toUpperCase()
 const selectedAccounts = username ? accounts.filter(account => account.username === username) : accounts
 
-if (process.argv.length > 3 || selectedAccounts.length === 0) {
-  console.error('Cách dùng: node scripts/seed-users.mjs [D01|TG01|TG02|AD01]')
+if (args.filter(x => x !== '--remote').length > 1 || selectedAccounts.length === 0) {
+  console.error('Cách dùng: node scripts/seed-users.mjs [D01|TG01|TG02|AD01] [--remote]')
   process.exit(1)
 }
 
@@ -86,10 +69,14 @@ if (!password || password.length < 8 || password.length > 128) {
   process.exit(1)
 }
 
+if (remote && process.env.CONFIRM_REMOTE_SEED !== 'YES') {
+  console.error('Dừng an toàn: đặt CONFIRM_REMOTE_SEED=YES để xác nhận ghi vào D1 remote.')
+  process.exit(1)
+}
 let sql = ''
 
 for (const account of selectedAccounts) {
-  const passwordHash = hashPassword(password)
+  const passwordHash = await createPasswordHash(password)
 
   sql += `
 INSERT INTO Users (
@@ -108,7 +95,7 @@ VALUES (
   ${sqlValue(account.serviceArea)},
   ${sqlValue(new Date().toISOString())}
 )
-ON CONFLICT(Username) DO UPDATE SET
+ON CONFLICT DO UPDATE SET
   PasswordHash = excluded.PasswordHash,
   FullName = excluded.FullName,
   Role = excluded.Role,
@@ -125,7 +112,7 @@ try {
     closeSync(file)
   }
   const result = spawnSync(process.execPath, [
-    cli, 'd1', 'execute', 'DB', '--local', '--file', fixture,
+    cli, 'd1', 'execute', 'DB', remote ? '--remote' : '--local', '--file', fixture,
   ], { cwd: backend, stdio: 'inherit', windowsHide: true })
   if (result.error) throw result.error
   process.exitCode = result.status ?? 1

@@ -1,6 +1,9 @@
 import { handleRequests } from "./requests.js";
-
-const encoder = new TextEncoder();
+import { registerCitizen } from "./registration.js";
+import { dbErrorLikely, safeLogRoute, sha256Hex } from "./reliability.js";
+import { normalizeUsername } from "../../shared/passwords.mjs";
+import { checkPassword } from "./password-service.js";
+export { PasswordService } from "./password-service.js";
 
 function json(data, status = 200, extraHeaders = {}) {
   return Response.json(data, {
@@ -12,12 +15,12 @@ function json(data, status = 200, extraHeaders = {}) {
   });
 }
 
-function errorResponse(message, status) {
+function errorResponse(message, status, code, extraHeaders = {}) {
   return json({
     success: false,
-    error: { message },
+    error: { code: code ?? ({ 400: 'INVALID_INPUT', 401: 'UNAUTHENTICATED', 403: 'FORBIDDEN', 404: 'NOT_FOUND', 500: 'INTERNAL_ERROR' }[status]), message },
     message,
-  }, status);
+  }, status, extraHeaders);
 }
 
 function randomToken() {
@@ -25,68 +28,6 @@ function randomToken() {
   return Array.from(bytes, b =>
     b.toString(16).padStart(2, "0")
   ).join("");
-}
-
-async function sha256(value) {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    encoder.encode(value)
-  );
-
-  return Array.from(new Uint8Array(digest), b =>
-    b.toString(16).padStart(2, "0")
-  ).join("");
-}
-
-async function hashPassword(password, salt) {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(password),
-    "PBKDF2",
-    false,
-    ["deriveBits"]
-  );
-
-  const bits = await crypto.subtle.deriveBits(
-    {
-      name: "PBKDF2",
-      salt: encoder.encode(salt),
-      iterations: 310000,
-      hash: "SHA-256",
-    },
-    key,
-    256
-  );
-
-  return Array.from(new Uint8Array(bits), b =>
-    b.toString(16).padStart(2, "0")
-  ).join("");
-}
-
-async function verifyPassword(password, stored) {
-  if (typeof stored !== "string") return false;
-
-  const parts = stored.split("$");
-
-  if (
-    parts.length !== 4 ||
-    parts[0] !== "pbkdf2_sha256" ||
-    parts[1] !== "310000" ||
-    !/^[0-9a-f]{64}$/.test(parts[3])
-  ) {
-    return false;
-  }
-
-  const actual = await hashPassword(password, parts[2]);
-  const expected = parts[3];
-
-  let diff = 0;
-
-  for (let i = 0; i < expected.length; i++) {
-    diff |= expected.charCodeAt(i) ^ actual.charCodeAt(i);
-  }
-
-  return diff === 0;
 }
 
 function getCookie(request, name) {
@@ -132,7 +73,7 @@ async function currentUser(request, env) {
     return null;
   }
 
-  const tokenHash = await sha256(token);
+  const tokenHash = await sha256Hex(token);
 
   const user = await env.DB.prepare(`
     SELECT
@@ -160,12 +101,11 @@ function validOrigin(request) {
 
   const target = new URL(request.url);
 
-  // Cho phép yêu cầu cùng nguồn
   if (origin === target.origin) {
     return true;
   }
 
-  // Các địa chỉ Frontend được phép trong môi trường local
+  // Chỉ mở Origin Vite khi Worker chạy local.
   const allowedLocalOrigins = [
     "http://localhost:5173",
     "http://localhost:5174",
@@ -185,182 +125,229 @@ function validOrigin(request) {
   );
 }
 
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    const path = url.pathname;
-    const method = request.method;
+async function handleApi(request, env) {
+  const url = new URL(request.url);
+  const path = url.pathname;
+  const method = request.method;
 
-    try {
-      if (method === "OPTIONS") {
-        return new Response(null, { status: 204 });
+  try {
+    if (method === "OPTIONS") {
+      return new Response(null, { status: 204 });
+    }
+
+    if (path === "/api/health" && method === "GET") {
+      const result = await env.DB.prepare(
+        "SELECT 1 AS connected"
+      ).first();
+
+      if (result?.connected !== 1) return errorResponse('Dịch vụ tạm thời không khả dụng.', 503, 'DB_UNAVAILABLE');
+      return json({
+        success: true,
+        api: 'ok',
+        db: 'ok',
+        service: "Recycle Connect API",
+        database: "connected",
+      });
+    }
+
+    if (method === "POST" && !validOrigin(request)) {
+      return errorResponse(
+        "Nguồn yêu cầu không hợp lệ.",
+        403
+      );
+    }
+
+    if (path === "/api/auth/register" && method === "POST") {
+      return await registerCitizen(request, env);
+    }
+
+    if (path === "/api/auth/login" && method === "POST") {
+      let body;
+
+      try {
+        body = await request.json();
+      } catch {
+        return errorResponse("JSON không hợp lệ.", 400);
       }
 
-      // KIỂM TRA BACKEND VÀ DATABASE
-      if (path === "/api/health" && method === "GET") {
-        const result = await env.DB.prepare(
-          "SELECT 1 AS connected"
-        ).first();
+      const username = normalizeUsername(body?.username);
+      const password = typeof body?.password === 'string' ? body.password : '';
 
-        return json({
-          success: true,
-          service: "Recycle Connect API",
-          database: result?.connected === 1
-            ? "connected"
-            : "unexpected_response",
-        });
-      }
-
-      // KIỂM TRA ORIGIN CHO POST
-      if (method === "POST" && !validOrigin(request)) {
+      if (
+        !body || Array.isArray(body) || !username ||
+        username.length > 30 ||
+        !password ||
+        password.length > 128
+      ) {
         return errorResponse(
-          "Nguồn yêu cầu không hợp lệ.",
-          403
+          "Thông tin đăng nhập không hợp lệ.",
+          400
         );
       }
 
-      // ĐĂNG NHẬP
-      if (path === "/api/auth/login" && method === "POST") {
-        let body;
+      const { success: allowed } = await env.LOGIN_LIMITER.limit({
+        key: 'login:' + (request.headers.get('CF-Connecting-IP') ?? 'local'),
+      });
+      if (!allowed) return errorResponse('Bạn đăng nhập quá nhiều lần. Vui lòng thử lại sau một phút.', 429,
+        'LOGIN_RATE_LIMITED', { 'Retry-After': '60' });
 
-        try {
-          body = await request.json();
-        } catch {
-          return errorResponse("JSON không hợp lệ.", 400);
-        }
+      const user = await env.DB.prepare(`
+        SELECT
+          UserId,
+          Username,
+          PasswordHash,
+          FullName,
+          Role,
+          ServiceArea
+        FROM Users
+        WHERE lower(Username) = ?
+      `).bind(username).first();
 
-        const username = String(body?.username || "").trim();
-        const password = String(body?.password || "");
+      const verified = await checkPassword(env, password, user?.PasswordHash);
 
-        if (
-          !username ||
-          username.length > 30 ||
-          !password ||
-          password.length > 128
-        ) {
-          return errorResponse(
-            "Thông tin đăng nhập không hợp lệ.",
-            400
-          );
-        }
-
-        const user = await env.DB.prepare(`
-          SELECT
-            UserId,
-            Username,
-            PasswordHash,
-            FullName,
-            Role,
-            ServiceArea
-          FROM Users
-          WHERE Username = ?
-        `).bind(username).first();
-
-        if (
-          !user ||
-          !(await verifyPassword(password, user.PasswordHash))
-        ) {
-          return errorResponse(
-            "Tên đăng nhập hoặc mật khẩu không đúng.",
-            401
-          );
-        }
-
-        const token = randomToken();
-        const tokenHash = await sha256(token);
-
-        const createdAt = new Date().toISOString();
-        const expiresAt = new Date(
-          Date.now() + 8 * 60 * 60 * 1000
-        ).toISOString();
-
-        await env.DB.prepare(`
-          INSERT INTO Sessions (
-            UserId,
-            TokenHash,
-            ExpiresAt,
-            RevokedAt,
-            CreatedAt
-          )
-          VALUES (?, ?, ?, NULL, ?)
-        `).bind(
-          user.UserId,
-          tokenHash,
-          expiresAt,
-          createdAt
-        ).run();
-
-        return json({
-          success: true,
-          user: publicUser(user),
-        }, 200, {
-          "Set-Cookie": sessionCookie(token, request),
-        });
+      if (!user || verified !== true) {
+        return errorResponse(
+          "Tên đăng nhập hoặc mật khẩu không đúng.",
+          401
+        );
       }
 
-      // LẤY THÔNG TIN TÀI KHOẢN
-      if (path === "/api/auth/me" && method === "GET") {
-        const user = await currentUser(request, env);
+      const token = randomToken();
+      const tokenHash = await sha256Hex(token);
 
-        if (!user) {
-          return errorResponse(
-            "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.",
-            401
-          );
-        }
+      const createdAt = new Date().toISOString();
+      const expiresAt = new Date(
+        Date.parse(createdAt) + 8 * 60 * 60 * 1000
+      ).toISOString();
 
-        return json({
-          success: true,
-          user: publicUser(user),
-        });
-      }
+      await env.DB.prepare(`
+        INSERT INTO Sessions (
+          UserId,
+          TokenHash,
+          ExpiresAt,
+          RevokedAt,
+          CreatedAt
+        )
+        VALUES (?, ?, ?, NULL, ?)
+      `).bind(
+        user.UserId,
+        tokenHash,
+        expiresAt,
+        createdAt
+      ).run();
 
-      // ĐĂNG XUẤT
-      if (path === "/api/auth/logout" && method === "POST") {
-        const token = getCookie(request, "rc_session");
-
-        if (!token || !/^[0-9a-f]{64}$/.test(token)) {
-          return errorResponse("Chưa đăng nhập.", 401);
-        }
-
-        const user = await currentUser(request, env);
-
-        if (!user) {
-          return errorResponse(
-            "Phiên đăng nhập không hợp lệ.",
-            401
-          );
-        }
-
-        await env.DB.prepare(`
-          UPDATE Sessions
-          SET RevokedAt = ?
-          WHERE TokenHash = ?
-            AND RevokedAt IS NULL
-        `).bind(
-          new Date().toISOString(),
-          await sha256(token)
-        ).run();
-
-        return new Response(null, {
-          status: 204,
-          headers: {
-            "Set-Cookie": sessionCookie("", request, 0),
-            "Cache-Control": "no-store",
-          },
-        });
-      }
-
-      const response = await handleRequests(request, url, env, currentUser);
-      return response ?? errorResponse("Không tìm thấy API.", 404);
-
-    } catch (error) {
-      console.error("API error:", error.name);
-
-      return errorResponse(
-        "Lỗi xử lý yêu cầu.",
-        500
-      );
+      return json({
+        success: true,
+        user: publicUser(user),
+        data: { user: publicUser(user) },
+      }, 200, {
+        "Set-Cookie": sessionCookie(token, request),
+      });
     }
+
+    if (path === "/api/auth/me" && method === "GET") {
+      const user = await currentUser(request, env);
+
+      if (!user) {
+        return errorResponse(
+          "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.",
+          401
+        );
+      }
+
+      return json({
+        success: true,
+        user: publicUser(user),
+        data: { user: publicUser(user) },
+      });
+    }
+
+    if (path === "/api/auth/logout" && method === "POST") {
+      const token = getCookie(request, "rc_session");
+
+      if (!token || !/^[0-9a-f]{64}$/.test(token)) {
+        return errorResponse("Chưa đăng nhập.", 401, 'UNAUTHENTICATED', {
+          'Set-Cookie': sessionCookie('', request, 0),
+        });
+      }
+
+      const user = await currentUser(request, env);
+
+      if (!user) {
+        return errorResponse(
+          "Phiên đăng nhập không hợp lệ.",
+          401, 'UNAUTHENTICATED', { 'Set-Cookie': sessionCookie('', request, 0) }
+        );
+      }
+
+      await env.DB.prepare(`
+        UPDATE Sessions
+        SET RevokedAt = ?
+        WHERE TokenHash = ?
+          AND RevokedAt IS NULL
+      `).bind(
+        new Date().toISOString(),
+        await sha256Hex(token)
+      ).run();
+
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "Set-Cookie": sessionCookie("", request, 0),
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+
+    const response = await handleRequests(request, url, env, currentUser);
+    return response ?? errorResponse("Không tìm thấy API.", 404);
+
+  } catch (error) {
+    if (error?.name === 'PasswordServiceError') {
+      return errorResponse('Dịch vụ xác thực tạm thời không khả dụng. Vui lòng thử lại sau.',
+        503, 'PASSWORD_SERVICE_UNAVAILABLE');
+    }
+    if (['NotSupportedError', 'OperationError'].includes(error?.name)) {
+      return errorResponse('Dịch vụ xác thực chưa tương thích cấu hình bảo mật. Vui lòng liên hệ quản trị viên.',
+        503, 'PASSWORD_RUNTIME_UNSUPPORTED');
+    }
+    const databaseUnavailable = dbErrorLikely(error);
+    return errorResponse(
+      "Dịch vụ tạm thời không khả dụng.",
+      databaseUnavailable ? 503 : 500,
+      databaseUnavailable ? 'DB_UNAVAILABLE' : 'INTERNAL_ERROR'
+    );
+  }
+}
+
+// Chỉ log mã truy vết và thông tin kỹ thuật, không log mật khẩu, cookie hoặc địa chỉ.
+export default {
+  async fetch(request, env) {
+    const requestId = crypto.randomUUID();
+    const started = Date.now();
+    let response = await handleApi(request, env);
+    const headers = new Headers(response.headers);
+    headers.set('X-Request-ID', requestId);
+    headers.set('Cache-Control', 'no-store');
+    let errorCode = null;
+    if (response.status >= 400 && (response.headers.get('Content-Type') || '').includes('json')) {
+      const body = await response.json().catch(() => null);
+      if (body && typeof body === 'object') {
+        errorCode = body?.error?.code || 'HTTP_' + response.status;
+        body.requestId = requestId;
+        response = Response.json(body, { status: response.status, headers });
+      }
+    }
+    console.log(JSON.stringify({
+      timestamp: new Date().toISOString(),
+      requestId,
+      method: request.method,
+      route: safeLogRoute(new URL(request.url).pathname),
+      status: response.status,
+      durationMs: Date.now() - started,
+      errorCode,
+      environment: env.ENVIRONMENT || 'unspecified',
+    }));
+    return new Response(response.body, { status: response.status, headers });
   },
 };

@@ -6,13 +6,13 @@ import { Recycle, LogOut, UserRound, Filter, AlertCircle, Sparkles } from 'lucid
 import { logout } from '../services/authService'
 import RequestCard from '../components/RequestCard'
 import RequestDetail from '../components/RequestDetail'
-import { getRequestPage, updateRequest } from '../services/requestService'
+import { getRequestDetail, getRequestPage, updateRequest } from '../services/requestService'
 import { AREA_OPTIONS, areaLabel } from '../services/requestOptions'
-import { useRequestData } from '../services/useRequestData'
+import { useRequestData } from '../hooks/useRequestData'
 import RequestFeedback from '../components/RequestFeedback'
 import RequestPagination from '../components/RequestPagination'
+import { useRetryCooldown } from '../hooks/useRetryCooldown'
 
-// Danh mục loại rác cố định theo Baseline; danh sách yêu cầu được tải từ API.
 const wasteOptions = [
   { value: '', label: 'Tất cả loại rác' },
   { value: 'GIAY', label: 'Giấy' },
@@ -34,6 +34,7 @@ function ThuGom({ user }) {
   const [priorityEnabled, setPriorityEnabled] = useState(false)
   const [busyId, setBusyId] = useState(null)
   const pending = useRef(false)
+  const cooldown = useRetryCooldown()
   const available = activeTab === 'CHO_NHAN'
   const serviceArea = areaLabel(user.serviceArea)
   const loadRequests = useCallback(signal => {
@@ -54,7 +55,7 @@ function ThuGom({ user }) {
   }
 
   async function handleAction(request, action) {
-    if (pending.current) return
+    if (pending.current || !list.synchronized || cooldown.blocked) return
     pending.current = true
     setBusyId(request.RequestId)
     setNotice('')
@@ -65,6 +66,7 @@ function ThuGom({ user }) {
       setSelectedRequest(current => current?.RequestId === request.RequestId ? null : current)
       list.refresh()
     } catch (error) {
+      cooldown.defer(error)
       if (error.status === 401) {
         navigate('/login', { replace: true })
         return
@@ -81,7 +83,20 @@ function ThuGom({ user }) {
           : 'Yêu cầu không còn tồn tại hoặc bạn không được phép xem.')
         list.refresh()
       } else {
-        setError(error.message || 'Không thể thực hiện thao tác. Vui lòng thử lại.')
+        setError(error.unknownOutcome
+          ? 'Chưa xác nhận được kết quả. Đang đọc lại trạng thái yêu cầu; vui lòng chờ dữ liệu đồng bộ.'
+          : error.message || 'Không thể thực hiện thao tác. Vui lòng thử lại.')
+        if (error.unknownOutcome) {
+          try {
+            const current = await getRequestDetail(request.RequestId)
+            if (String(current.CollectorId) === String(user.userId) &&
+              (action === 'accept' ? ['DA_NHAN', 'HOAN_THANH'].includes(current.Status) : current.Status === 'HOAN_THANH')) {
+              setError('')
+              setNotice(action === 'accept' ? 'Đã xác nhận yêu cầu được tiếp nhận.' : 'Đã xác nhận yêu cầu hoàn thành.')
+            }
+          } catch { /* Giữ dữ liệu đã xác nhận cho tới khi GET thành công. */ }
+          list.refresh()
+        }
       }
     } finally {
       pending.current = false
@@ -270,7 +285,7 @@ function ThuGom({ user }) {
                         request.Status === 'CHO_NHAN' ? (
                           <button
                             type="button"
-                            disabled={busyId !== null}
+                            disabled={busyId !== null || !list.synchronized || cooldown.blocked}
                             aria-busy={busyId === request.RequestId}
                             onClick={() => handleAction(request, 'accept')}
                             className="rounded-xl bg-[#167D61] px-4 py-2 font-medium text-white hover:bg-[#11634D] disabled:opacity-50"
@@ -281,7 +296,7 @@ function ThuGom({ user }) {
                           String(request.CollectorId) === String(user.userId) ? (
                           <button
                             type="button"
-                            disabled={busyId !== null}
+                            disabled={busyId !== null || !list.synchronized || cooldown.blocked}
                             aria-busy={busyId === request.RequestId}
                             onClick={() => handleAction(request, 'complete')}
                             className="rounded-xl bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"

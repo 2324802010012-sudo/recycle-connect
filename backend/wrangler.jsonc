@@ -1,18 +1,78 @@
-
 {
-  "name": "recycle-connect-api",
-  "main": "src/index.js",
-  "compatibility_date": "2026-11-19",
-  "assets": {
-    "directory": "../frontend/dist",
-    "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
-  },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "recycle-connect-db",
-      "database_id": "5b4a7a63-73fe-4614-900e-31fec2e455e2"
-    }
-  ]
+	"name": "recycle-connect",
+	"main": "src/index.js",
+	"compatibility_date": "2026-11-19",
+	"vars": {
+		"ENVIRONMENT": "demo"
+	},
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1,
+		"logs": {
+			"enabled": true,
+			"invocation_logs": false
+		}
+	},
+	"ratelimits": [
+		{
+			"name": "LOGIN_LIMITER",
+			"namespace_id": "1001",
+			"simple": {
+				"limit": 10,
+				"period": 60
+			}
+		},
+		{
+			"name": "REGISTRATION_LIMITER",
+			"namespace_id": "1002",
+			"simple": {
+				"limit": 5,
+				"period": 60
+			}
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "PASSWORD_SERVICE",
+				"class_name": "PasswordService"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "password-service-v1",
+			"new_sqlite_classes": [
+				"PasswordService"
+			]
+		}
+	],
+	"assets": {
+		"directory": "../frontend/dist",
+		"not_found_handling": "single-page-application",
+		"run_worker_first": [
+			"/api/*"
+		]
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "recycle-connect-db",
+			"database_id": "8aff86ee-ec70-45fc-b960-3559ccd21375",
+			// Giữ định danh SQLite local cũ, không dùng cho dev --remote hoặc --preview.
+			"preview_database_id": "5b4a7a63-73fe-4614-900e-31fec2e455e2"
+		},
+		{
+			"binding": "recycle_connect_db",
+			"database_name": "recycle-connect-db",
+			"database_id": "633f6af8-0763-4809-bc52-0f0055608d92",
+			"remote": true
+		},
+		{
+			"binding": "recycle_connect_db_final",
+			"database_name": "recycle-connect-db-final",
+			"database_id": "8aff86ee-ec70-45fc-b960-3559ccd21375",
+			"remote": true
+		}
+	]
 }

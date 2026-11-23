@@ -1,5 +1,9 @@
 {
-  "devDependencies": {
-    "wrangler": "^4.165.0"
+  "name": "recycle-connect",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix frontend run build",
+    "lint": "npm --prefix frontend run lint",
+    "dev": "npm --prefix backend run dev"
   }
 }

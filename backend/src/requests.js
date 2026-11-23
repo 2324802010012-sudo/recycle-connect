@@ -1,4 +1,5 @@
-﻿import { AREA_OPTIONS, REQUEST_STATUSES, WASTE_TYPES, vietnamDate } from '../../shared/request-options.mjs'
+import { sha256Hex, validIdempotencyKey } from './reliability.js'
+import { AREA_OPTIONS, REQUEST_STATUSES, WASTE_TYPES, vietnamDate } from '../../shared/request-options.mjs'
 
 const areas = AREA_OPTIONS.map(({ value }) => value)
 const roles = {
@@ -110,7 +111,7 @@ async function listRequests(db, user, params, path) {
   const { page, limit } = pagination(params)
   const mine = path.endsWith('/mine')
   const myStatus = mine ? filterValue(params, 'status', REQUEST_STATUSES) : null
-  const prioritize = path.endsWith('/available') && params.get('priority') === '1'
+  const prioritize = path.endsWith('/available') && filterValue(params, 'priority', ['0', '1']) === '1'
   const filters = []
   const values = []
   function add(filter, value) {
@@ -183,22 +184,44 @@ async function createRequest(request, db, user) {
   }
   if (address.length < 5 || address.length > 200) throw badInput('Địa chỉ phải có từ 5 đến 200 ký tự.')
   if (!areas.includes(area)) throw badInput('Khu vực thu gom không hợp lệ.')
-  if (!validDate(preferredDate) || preferredDate < vietnamDate(now)) {
+  if (!validDate(preferredDate)) {
     throw badInput('Ngày mong muốn phải hợp lệ và từ hôm nay trở đi.')
   }
   if (typeof note !== 'string' || note.length > 500) throw badInput('Ghi chú tối đa 500 ký tự.')
 
+  const key = request.headers.get('Idempotency-Key')?.toLowerCase() ?? null
+  if (!validIdempotencyKey(key)) throw badInput('Idempotency-Key là bắt buộc và phải là UUID hợp lệ.')
+  const normalized = { wasteType, quantityKg, address, area, preferredDate, note: note.trim() || null }
+  const hash = await sha256Hex(JSON.stringify(normalized))
+  async function replay() {
+    const previous = await db.prepare(`SELECT RequestId, Status, PayloadHash FROM Requests
+      WHERE UserId = ? AND ClientRequestId = ?`).bind(user.UserId, key).first()
+    if (!previous) return null
+    if (previous.PayloadHash !== hash) {
+      throw new RequestError(409, 'IDEMPOTENCY_KEY_REUSED', 'Mã thao tác đã dùng cho nội dung khác.')
+    }
+    return success({ requestId: previous.RequestId, status: previous.Status, replay: true })
+  }
+  // Gửi lại cùng thao tác vẫn hợp lệ sau ngày hẹn; UNIQUE xử lý hai INSERT đồng thời.
+  const previous = await replay()
+  if (previous) return previous
+  if (preferredDate < vietnamDate(now)) throw badInput('Ngày mong muốn phải hợp lệ và từ hôm nay trở đi.')
   const timestamp = now.toISOString()
-  const [insert] = await db.batch([
-    db.prepare(`INSERT INTO Requests
-      (UserId, WasteType, QuantityKg, Address, Area, PreferredDate, Note, CreatedAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      RETURNING RequestId AS requestId, Status AS status`)
-      .bind(user.UserId, wasteType, quantityKg, address, area, preferredDate, note.trim() || null, timestamp),
-    db.prepare(`INSERT INTO RequestLogs (RequestId, ActorId, Action, CreatedAt)
-      VALUES (last_insert_rowid(), ?, 'CREATE', ?)`).bind(user.UserId, timestamp),
-  ])
-  return success(insert.results[0], 201)
+  try {
+    // Trigger ghi CREATE trong cùng câu lệnh; lỗi log sẽ rollback cả đơn.
+    const inserted = await db.prepare(`INSERT INTO Requests
+        (UserId, WasteType, QuantityKg, Address, Area, PreferredDate, Note, CreatedAt, ClientRequestId, PayloadHash)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        RETURNING RequestId AS requestId, Status AS status`)
+        .bind(user.UserId, wasteType, quantityKg, address, area, preferredDate, normalized.note, timestamp, key, hash).first()
+    return success({ ...inserted, replay: false }, 201)
+  } catch (error) {
+    if (!/UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i.test(String(error?.message))) throw error
+    // Khi INSERT trùng key, đọc lại đơn do request còn lại vừa tạo.
+    const previous = await replay()
+    if (!previous) throw error
+    return previous
+  }
 }
 
 async function requestDetail(db, user, id) {
@@ -223,19 +246,12 @@ async function transition(db, user, id, action) {
         RETURNING RequestId AS requestId, Status AS status, CompletedAt AS completedAt`)
       .bind(timestamp, id, user.UserId)
 
-  // D1 executes the batch transaction on one connection. changes() reads
-  // the immediately preceding UPDATE and suppresses logs for losing writers.
-  const [result] = await db.batch([
-    update,
-    db.prepare(`INSERT INTO RequestLogs (RequestId, ActorId, Action, CreatedAt)
-      SELECT ?, ?, ?, ? WHERE changes() = 1`)
-      .bind(id, user.UserId, accepting ? 'ACCEPT' : 'COMPLETE', timestamp),
-  ])
-
-  if (result.results.length === 1) return success(result.results[0])
+  // Chỉ UPDATE thắng mới kích hoạt trigger ghi log trạng thái.
+  const result = await update.first()
+  if (result) return success(result)
+  const row = await db.prepare('SELECT CollectorId FROM Requests WHERE RequestId = ?').bind(id).first()
+  if (!row) throw unavailable()
   if (!accepting) {
-    const row = await db.prepare('SELECT CollectorId FROM Requests WHERE RequestId = ?').bind(id).first()
-    if (!row) throw unavailable()
     if (row.CollectorId !== null && row.CollectorId !== user.UserId) throw forbidden()
   }
   throw conflict()
